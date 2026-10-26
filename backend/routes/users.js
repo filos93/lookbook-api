@@ -100,4 +100,41 @@ router.delete('/:id', async (req, res) => {
     }
 });
 
+// PUT /api/users/:id - Modifica dati utente
+router.put('/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name, surname, email } = req.body;
+
+        // 1. Verifica che l'utente esista
+        const [users] = await pool.execute('SELECT id, name, surname, email FROM users WHERE id = ?', [id]);
+        if (users.length === 0) {
+            return res.status(404).json({ error: 'Utente non trovato' });
+        }
+
+        // 2. Prepara i nuovi valori (se un campo non viene passato nel body, mantiene quello attuale)
+        const updatedName = name !== undefined ? name : users[0].name;
+        const updatedSurname = surname !== undefined ? surname : users[0].surname;
+        const updatedEmail = email !== undefined ? email : users[0].email;
+
+        // 3. Esegui l'UPDATE nel DB
+        await pool.execute(
+            'UPDATE users SET name = ?, surname = ?, email = ? WHERE id = ?',
+            [updatedName, updatedSurname, updatedEmail, id]
+        );
+
+        res.json({
+            id: parseInt(id, 10),
+            name: updatedName,
+            surname: updatedSurname,
+            email: updatedEmail
+        });
+    } catch (error) {
+        if (error.code === 'ER_DUP_ENTRY') {
+            return res.status(400).json({ error: 'Email già registrata da un altro utente' });
+        }
+        res.status(500).json({ error: 'Errore durante l\'aggiornamento dell\'utente', details: error.message });
+    }
+});
+
 module.exports = router;

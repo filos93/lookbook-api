@@ -6,13 +6,17 @@ import SwapRecord from './components/SwapRecord';
 import SwapCard from './components/SwapCard';
 import UserRegisterModal from './components/UserRegisterModal';
 import AddProductModal from './components/AddProductModal';
+import EditUserModal from './components/EditUserModal';
+import EditProductModal from './components/EditProductModal';
 import { 
   fetchProducts, 
   fetchSwaps, 
   fetchUsers, 
   deleteSwap, 
   deleteProduct, 
-  deleteUser 
+  deleteUser,
+  updateUser,
+  updateProduct
 } from './api/client';
 
 export default function App() {
@@ -23,9 +27,14 @@ export default function App() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Creation Modals
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [showSwapBuilder, setShowSwapBuilder] = useState(false);
+
+  // Editing State
+  const [editingUser, setEditingUser] = useState(null);
+  const [editingProduct, setEditingProduct] = useState(null);
 
   const loadAllData = async () => {
     try {
@@ -86,6 +95,26 @@ export default function App() {
     try {
       await deleteUser(id);
       setUsers(users.filter((u) => u.id !== id));
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const handleUpdateUser = async (userId, updatedData) => {
+    try {
+      await updateUser(userId, updatedData);
+      await loadAllData();
+      setEditingUser(null);
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const handleUpdateProduct = async (productId, updatedData) => {
+    try {
+      await updateProduct(productId, updatedData);
+      await loadAllData();
+      setEditingProduct(null);
     } catch (err) {
       alert(err.message);
     }
@@ -191,6 +220,7 @@ export default function App() {
                 key={p.id}
                 product={p}
                 onDelete={handleDeleteProduct}
+                onEdit={(productToEdit) => setEditingProduct(productToEdit)}
                 onSwapClick={() => {
                   setShowSwapBuilder(true);
                   window.scrollTo({ top: 250, behavior: 'smooth' });
@@ -227,23 +257,33 @@ export default function App() {
                     <p className="text-xs text-gray-400">{u.email}</p>
                   </div>
                 </div>
-                <button
-                  onClick={() => {
-                    if (confirm(`Eliminare l'utente ${u.name} ${u.surname}?`)) {
-                      handleDeleteUser(u.id);
-                    }
-                  }}
-                  className="text-red-400 hover:text-red-300 hover:bg-red-950/40 p-2 rounded-lg text-sm font-bold transition"
-                  title="Elimina Utente"
-                >
-                  ✕
-                </button>
+                <div className="flex items-center space-x-1">
+                  <button
+                    onClick={() => setEditingUser(u)}
+                    className="text-gray-400 hover:text-indigo-400 hover:bg-indigo-950/40 p-2 rounded-lg text-sm font-bold transition"
+                    title="Modifica Utente"
+                  >
+                    ✏️
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (confirm(`Eliminare l'utente ${u.name} ${u.surname}?`)) {
+                        handleDeleteUser(u.id);
+                      }
+                    }}
+                    className="text-red-400 hover:text-red-300 hover:bg-red-950/40 p-2 rounded-lg text-sm font-bold transition"
+                    title="Elimina Utente"
+                  >
+                    ✕
+                  </button>
+                </div>
               </div>
             ))}
           </div>
         )}
       </main>
 
+      {/* Modals for Creation */}
       <UserRegisterModal
         isOpen={isUserModalOpen}
         onClose={() => setIsUserModalOpen(false)}
@@ -256,6 +296,24 @@ export default function App() {
         users={users}
         onProductCreated={() => loadAllData()}
       />
+
+      {/* Modals for Editing */}
+      {editingUser && (
+        <EditUserModal
+          user={editingUser}
+          onClose={() => setEditingUser(null)}
+          onSave={handleUpdateUser}
+        />
+      )}
+
+      {editingProduct && (
+        <EditProductModal
+          product={editingProduct}
+          users={users}
+          onClose={() => setEditingProduct(null)}
+          onSave={handleUpdateProduct}
+        />
+      )}
     </div>
   );
 }

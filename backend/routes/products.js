@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../config/db');
 
-// GET /api/products - Elenco prodotti in ordine sequenziale (1 a N) con prezzo e foto
+// GET /api/products - Elenco prodotti con proprietario e foto
 router.get('/', async (req, res) => {
     try {
         const [rows] = await pool.execute(`
@@ -26,7 +26,7 @@ router.get('/', async (req, res) => {
     }
 });
 
-// POST /api/products - Creazione prodotto con gestione prezzo e foto
+// POST /api/products - Creazione prodotto
 router.post('/', async (req, res) => {
     const connection = await pool.getConnection();
     try {
@@ -64,28 +64,36 @@ router.post('/', async (req, res) => {
     }
 });
 
-// PUT /api/products/:id - Modifica nome e prezzo del prodotto
+// PUT /api/products/:id - Modifica prodotto (inclusa la riassegnazione di user_id)
 router.put('/:id', async (req, res) => {
     const connection = await pool.getConnection();
     try {
         const { id } = req.params;
-        const { name, price, photos } = req.body;
-        if (!name) return res.status(400).json({ error: 'Nome obbligatorio' });
-
-        const numericPrice = parseFloat(price) || 0.00;
+        const { user_id, name, price, photos } = req.body;
 
         await connection.beginTransaction();
 
-        const [result] = await connection.execute(
-            'UPDATE products SET name = ?, price = ? WHERE id = ?',
-            [name, numericPrice, id]
-        );
-
-        if (result.affectedRows === 0) {
+        // 1. Verifica che il prodotto esista
+        const [products] = await connection.execute('SELECT * FROM products WHERE id = ?', [id]);
+        if (products.length === 0) {
             await connection.rollback();
             return res.status(404).json({ error: 'Prodotto non trovato' });
         }
 
+        const currentProduct = products[0];
+
+        // 2. Prepara i nuovi valori (mantiene i precedenti se omessi)
+        const updatedUserId = user_id !== undefined ? user_id : currentProduct.user_id;
+        const updatedName = name !== undefined ? name : currentProduct.name;
+        const updatedPrice = price !== undefined ? parseFloat(price) : currentProduct.price;
+
+        // 3. Aggiorna la tabella principale
+        await connection.execute(
+            'UPDATE products SET user_id = ?, name = ?, price = ? WHERE id = ?',
+            [updatedUserId, updatedName, updatedPrice, id]
+        );
+
+        // 4. Aggiorna le foto se passate nel body
         if (photos && Array.isArray(photos)) {
             await connection.execute('DELETE FROM product_photos WHERE product_id = ?', [id]);
             for (const photoUrl of photos) {
@@ -97,7 +105,15 @@ router.put('/:id', async (req, res) => {
         }
 
         await connection.commit();
-        res.json({ message: 'Prodotto aggiornato', id: Number(id), name, price: numericPrice, photos });
+
+        res.json({
+            message: 'Prodotto aggiornato con successo',
+            id: Number(id),
+            user_id: updatedUserId,
+            name: updatedName,
+            price: updatedPrice,
+            photos: photos || []
+        });
     } catch (error) {
         await connection.rollback();
         res.status(500).json({ error: 'Errore modifica prodotto', details: error.message });
@@ -114,17 +130,13 @@ router.delete('/:id', async (req, res) => {
     try {
         await connection.beginTransaction();
 
-        // 1. Verifica esistenza prodotto
         const [products] = await connection.execute('SELECT id FROM products WHERE id = ?', [id]);
         if (products.length === 0) {
             await connection.rollback();
             return res.status(404).json({ error: 'Prodotto non trovato' });
         }
 
-        // 2. Elimina le foto associate
         await connection.execute('DELETE FROM product_photos WHERE product_id = ?', [id]);
-
-        // 3. Elimina il prodotto (l'utente proprietario NON viene toccato)
         await connection.execute('DELETE FROM products WHERE id = ?', [id]);
 
         await connection.commit();

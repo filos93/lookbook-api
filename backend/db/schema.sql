@@ -1,12 +1,14 @@
--- ============================================================
--- SCHEMA DATABASE COMPLETO - LOOKBOOK DB
--- ============================================================
+USE defaultdb;
 
-DROP DATABASE IF EXISTS lookbook_db;
-CREATE DATABASE lookbook_db;
-USE lookbook_db;
+-- Elimina le tabelle se esistono già (in ordine inverso rispetto alle chiavi esterne)
+DROP TABLE IF EXISTS swap_order_products;
+DROP TABLE IF EXISTS swap_order_users;
+DROP TABLE IF EXISTS swap_orders;
+DROP TABLE IF EXISTS product_photos;
+DROP TABLE IF EXISTS products;
+DROP TABLE IF EXISTS users;
 
--- 1. Tabella Utenti (Anagrafica)
+-- 1. Tabella Utenti
 CREATE TABLE users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
@@ -15,7 +17,7 @@ CREATE TABLE users (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 2. Tabella Prodotti (Incluso campo price DECIMAL)
+-- 2. Tabella Prodotti
 CREATE TABLE products (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,

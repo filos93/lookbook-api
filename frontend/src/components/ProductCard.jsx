@@ -1,4 +1,4 @@
-export default function ProductCard({ product, onDelete, onSwapClick }) {
+export default function ProductCard({ product, onDelete, onEdit, onSwapClick }) {
   const { id, name, price, owner_name, photos } = product;
   const coverImage = photos && photos.length > 0 
     ? photos[0] 
@@ -9,19 +9,34 @@ export default function ProductCard({ product, onDelete, onSwapClick }) {
       <div>
         {/* Container Immagine */}
         <div className="relative h-64 w-full bg-[#0b0e17] overflow-hidden">
-          {/* Tasto Elimina Prodotto */}
-          {onDelete && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                if (confirm(`Eliminare il capo "${name}"?`)) onDelete(id);
-              }}
-              className="absolute top-3 left-3 bg-red-600/80 hover:bg-red-600 text-white text-xs font-bold w-7 h-7 rounded-full flex items-center justify-center backdrop-blur-md z-20 transition"
-              title="Elimina prodotto"
-            >
-              ✕
-            </button>
-          )}
+          {/* Azioni in alto a sinistra (Elimina & Modifica) */}
+          <div className="absolute top-3 left-3 flex space-x-1.5 z-20">
+            {onDelete && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (confirm(`Eliminare il capo "${name}"?`)) onDelete(id);
+                }}
+                className="bg-red-600/80 hover:bg-red-600 text-white text-xs font-bold w-7 h-7 rounded-full flex items-center justify-center backdrop-blur-md transition"
+                title="Elimina prodotto"
+              >
+                ✕
+              </button>
+            )}
+
+            {onEdit && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit(product);
+                }}
+                className="bg-indigo-600/80 hover:bg-indigo-600 text-white text-xs font-bold w-7 h-7 rounded-full flex items-center justify-center backdrop-blur-md transition"
+                title="Modifica prodotto"
+              >
+                ✏️
+              </button>
+            )}
+          </div>
 
           <span className="absolute top-3 right-3 bg-[#6366f1] text-white text-xs font-bold px-2.5 py-1 rounded-md z-10 shadow-md">
             €{Number(price).toFixed(2)}
