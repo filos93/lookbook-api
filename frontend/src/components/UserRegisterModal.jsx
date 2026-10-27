@@ -1,30 +1,75 @@
 import { useState } from 'react';
 
+// Regex client per consentire lettere (anche accentate), spazi, apostrofi e trattini (no cifre/caratteri speciali)
+const NAME_REGEX = /^[A-Za-zÀ-ÖØ-öø-ÿ\s'-]+$/;
+
 export default function UserRegisterModal({ isOpen, onClose, onUserCreated }) {
   const [formData, setFormData] = useState({ name: '', surname: '', email: '' });
+  const [errorMessage, setErrorMessage] = useState('');
   const [loading, setLoading] = useState(false);
 
   if (!isOpen) return null;
 
+  // Handler per la sanitizzazione in tempo reale di Nome e Cognome
+  const handleNameChange = (field, value) => {
+    // Rimuove cifre numeriche e caratteri speciali non ammessi al volo
+    const sanitized = value.replace(/[^A-Za-zÀ-ÖØ-öø-ÿ\s'-]/g, '');
+    setFormData((prev) => ({ ...prev, [field]: sanitized }));
+    if (errorMessage) setErrorMessage('');
+  };
+
+  // Handler per la sanitizzazione dell'email (no spazi, sempre minuscola)
+  const handleEmailChange = (value) => {
+    const cleanEmail = value.trim().toLowerCase();
+    setFormData((prev) => ({ ...prev, email: cleanEmail }));
+    if (errorMessage) setErrorMessage('');
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setErrorMessage('');
+
+    // Pre-validazione lato client prima di inviare al server
+    const trimmedName = formData.name.trim();
+    const trimmedSurname = formData.surname.trim();
+    const trimmedEmail = formData.email.trim();
+
+    if (trimmedName.length < 2 || trimmedSurname.length < 2) {
+      setErrorMessage('Nome e Cognome devono contenere almeno 2 caratteri.');
+      return;
+    }
+
+    if (!NAME_REGEX.test(trimmedName) || !NAME_REGEX.test(trimmedSurname)) {
+      setErrorMessage('Nome e Cognome non possono contenere numeri o caratteri speciali.');
+      return;
+    }
+
     setLoading(true);
     try {
+      const payload = {
+        name: trimmedName,
+        surname: trimmedSurname,
+        email: trimmedEmail
+      };
+
       const res = await fetch('/api/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
 
-      if (!res.ok) throw new Error('Errore durante la registrazione dell\'utente');
+      const data = await res.json();
 
-      const newUser = await res.json();
-      if (onUserCreated) onUserCreated(newUser);
+      if (!res.ok) {
+        throw new Error(data.error || 'Errore durante la registrazione dell\'utente');
+      }
+
+      if (onUserCreated) onUserCreated(data);
       
       setFormData({ name: '', surname: '', email: '' });
       onClose();
     } catch (err) {
-      alert(err.message);
+      setErrorMessage(err.message);
     } finally {
       setLoading(false);
     }
@@ -48,6 +93,14 @@ export default function UserRegisterModal({ isOpen, onClose, onUserCreated }) {
           </button>
         </div>
 
+        {/* Alert di Errore Backend/Client */}
+        {errorMessage && (
+          <div className="bg-red-500/10 border border-red-500/50 text-red-400 text-xs rounded-lg p-3 flex items-center space-x-2">
+            <span>⚠️</span>
+            <span>{errorMessage}</span>
+          </div>
+        )}
+
         {/* Form Modale */}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -57,9 +110,11 @@ export default function UserRegisterModal({ isOpen, onClose, onUserCreated }) {
             <input
               type="text"
               required
+              minLength={2}
+              maxLength={50}
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full bg-[#0b0e17] text-white text-sm rounded-lg px-3 py-2.5 border border-[#1f263e] focus:outline-none focus:border-[#6366f1] placeholder-gray-600"
+              onChange={(e) => handleNameChange('name', e.target.value)}
+              className="w-full bg-[#0b0e17] text-white text-sm rounded-lg px-3 py-2.5 border border-[#1f263e] focus:outline-none focus:border-[#6366f1] placeholder-gray-600 transition"
               placeholder="Es. Mario"
             />
           </div>
@@ -71,9 +126,11 @@ export default function UserRegisterModal({ isOpen, onClose, onUserCreated }) {
             <input
               type="text"
               required
+              minLength={2}
+              maxLength={50}
               value={formData.surname}
-              onChange={(e) => setFormData({ ...formData, surname: e.target.value })}
-              className="w-full bg-[#0b0e17] text-white text-sm rounded-lg px-3 py-2.5 border border-[#1f263e] focus:outline-none focus:border-[#6366f1] placeholder-gray-600"
+              onChange={(e) => handleNameChange('surname', e.target.value)}
+              className="w-full bg-[#0b0e17] text-white text-sm rounded-lg px-3 py-2.5 border border-[#1f263e] focus:outline-none focus:border-[#6366f1] placeholder-gray-600 transition"
               placeholder="Es. Rossi"
             />
           </div>
@@ -86,9 +143,9 @@ export default function UserRegisterModal({ isOpen, onClose, onUserCreated }) {
               type="email"
               required
               value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="w-full bg-[#0b0e17] text-white text-sm rounded-lg px-3 py-2.5 border border-[#1f263e] focus:outline-none focus:border-[#6366f1] placeholder-gray-600"
-              placeholder="mario.rossi@example.com"
+              onChange={(e) => handleEmailChange(e.target.value)}
+              className="w-full bg-[#0b0e17] text-white text-sm rounded-lg px-3 py-2.5 border border-[#1f263e] focus:outline-none focus:border-[#6366f1] placeholder-gray-600 transition"
+              placeholder="mario.rossi99@example.com"
             />
           </div>
 
@@ -104,7 +161,7 @@ export default function UserRegisterModal({ isOpen, onClose, onUserCreated }) {
             <button
               type="submit"
               disabled={loading}
-              className="px-4 py-2 bg-[#4f46e5] hover:bg-[#4338ca] text-white rounded-lg text-xs font-bold transition shadow-md shadow-indigo-500/20"
+              className="px-4 py-2 bg-[#4f46e5] hover:bg-[#4338ca] text-white rounded-lg text-xs font-bold transition shadow-md shadow-indigo-500/20 disabled:opacity-50"
             >
               {loading ? 'Salvataggio...' : 'Conferma Utente'}
             </button>

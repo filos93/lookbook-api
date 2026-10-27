@@ -37,29 +37,32 @@ export default function Navbar({
         </div>
 
         {/* Action Buttons Top Right */}
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2.5">
+          {/* 1. Crea Utente */}
           <button
             onClick={onOpenCreateUser}
-            className="bg-[#1b2238] hover:bg-[#252f4c] text-gray-200 text-xs font-medium px-3.5 py-2 rounded-lg border border-[#2d3758] transition flex items-center space-x-1"
+            className="bg-[#3f3f46] hover:bg-[#27272a] text-white text-xs font-semibold px-3.5 py-2 rounded-lg transition-all duration-200 flex items-center space-x-1.5 shadow-md shadow-indigo-500/20"
           >
-            <span>👤</span>
+            <span className="text-slate-200 text-sm">👤</span>
             <span>+ Crea Utente</span>
           </button>
 
-          <button
-            onClick={onOpenCreateSwap}
-            className="bg-[#1b2238] hover:bg-[#252f4c] text-emerald-400 text-xs font-medium px-3.5 py-2 rounded-lg border border-[#2d3758] transition flex items-center space-x-1"
-          >
-            <span>⇄</span>
-            <span>Nuovo Swap</span>
-          </button>
-
+          {/* 2. Aggiungi Capo */}
           <button
             onClick={onOpenAddProduct}
-            className="bg-[#4f46e5] hover:bg-[#4338ca] text-white text-xs font-medium px-4 py-2 rounded-lg transition shadow-md shadow-indigo-500/20 flex items-center space-x-1"
+            className="bg-[#4f46e5] hover:bg-[#4338ca] text-white text-xs font-semibold px-3.5 py-2 rounded-lg transition-all duration-200 flex items-center space-x-1.5 shadow-md shadow-indigo-500/20"
           >
-            <span>+</span>
+            <span className="text-white font-bold">+</span>
             <span>Aggiungi Capo</span>
+          </button>
+          
+          {/* 3. Nuovo Swap */}
+          <button
+            onClick={onOpenCreateSwap}
+            className="bg-[#10b981] hover:bg-[#059669] text-emerald-50 text-xs font-semibold px-3.5 py-2 rounded-lg transition-all duration-200 flex items-center space-x-1.5 shadow-md shadow-emerald-500/20"
+          >
+            <span className="text-emerald-200">⇄</span>
+            <span>Nuovo Swap</span>
           </button>
         </div>
 
