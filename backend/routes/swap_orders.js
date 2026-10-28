@@ -2,6 +2,64 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../config/db');
 
+// --- HELPER DI VALIDAZIONE SWAP ---
+async function validateSwapData(connection, userIds, productIds) {
+    const errors = [];
+
+    // 1. Controllo presenza e formato array
+    if (!Array.isArray(userIds) || userIds.length !== 2) {
+        return { isValid: false, errors: ['Devi selezionare esattamente 2 utenti distinti per lo swap.'] };
+    }
+    if (!Array.isArray(productIds) || productIds.length !== 2) {
+        return { isValid: false, errors: ['Devi selezionare esattamente 2 prodotti distinti per lo swap.'] };
+    }
+
+    const u1 = parseInt(userIds[0], 10);
+    const u2 = parseInt(userIds[1], 10);
+    const p1 = parseInt(productIds[0], 10);
+    const p2 = parseInt(productIds[1], 10);
+
+    // 2. Prevenzione Swap sullo stesso utente
+    if (u1 === u2) {
+        errors.push('Lo swap deve avvenire tra due utenti differenti.');
+    }
+
+    // 3. Prevenzione Swap sullo stesso prodotto
+    if (p1 === p2) {
+        errors.push('Lo swap deve coinvolgere due articoli differenti.');
+    }
+
+    if (errors.length > 0) {
+        return { isValid: false, errors };
+    }
+
+    // 4. Verifica esistenza e proprietà dei prodotti sul DB
+    const [products] = await connection.execute(
+        'SELECT id, user_id FROM products WHERE id IN (?, ?)',
+        [p1, p2]
+    );
+
+    if (products.length !== 2) {
+        errors.push('Uno o entrambi i prodotti selezionati non esistono.');
+        return { isValid: false, errors };
+    }
+
+    const prod1 = products.find(p => p.id === p1);
+    const prod2 = products.find(p => p.id === p2);
+
+    // 5. Verifica la coerenza proprietario-prodotto (User 1 possiede Prod 1 e User 2 possiede Prod 2, oppure viceversa)
+    const validOwnership = 
+        (prod1.user_id === u1 && prod2.user_id === u2) ||
+        (prod1.user_id === u2 && prod2.user_id === u1);
+
+    if (!validOwnership) {
+        errors.push('Ciascun capo selezionato deve appartenere al rispettivo utente partecipante allo swap.');
+    }
+
+    return { isValid: errors.length === 0, errors, cleanUserIds: [u1, u2], cleanProductIds: [p1, p2] };
+}
+
+
 // GET /api/swaps - Elenco degli ordini swap con valore totale scambiato
 router.get('/', async (req, res) => {
     try {
@@ -32,7 +90,6 @@ router.get('/', async (req, res) => {
                 WHERE sop.order_id = ?
             `, [swap.id]);
 
-            // Somma del valore di tutti i prodotti coinvolti nello swap
             const totalGrossValue = products.reduce((acc, curr) => acc + Number(curr.price || 0), 0);
 
             swap.users = users;
@@ -52,8 +109,10 @@ router.post('/', async (req, res) => {
     try {
         const { user_ids, product_ids } = req.body;
 
-        if (!user_ids || user_ids.length !== 2 || !product_ids || product_ids.length !== 2) {
-            return res.status(400).json({ error: 'Devi selezionare esattamente 2 utenti e 2 prodotti' });
+        // Validazione stringente
+        const { isValid, errors, cleanUserIds, cleanProductIds } = await validateSwapData(connection, user_ids, product_ids);
+        if (!isValid) {
+            return res.status(400).json({ error: errors.join(' ') });
         }
 
         await connection.beginTransaction();
@@ -61,16 +120,16 @@ router.post('/', async (req, res) => {
         const [orderResult] = await connection.execute('INSERT INTO swap_orders () VALUES ()');
         const orderId = orderResult.insertId;
 
-        for (const userId of user_ids) {
+        for (const userId of cleanUserIds) {
             await connection.execute('INSERT INTO swap_order_users (order_id, user_id) VALUES (?, ?)', [orderId, userId]);
         }
 
-        for (const productId of product_ids) {
+        for (const productId of cleanProductIds) {
             await connection.execute('INSERT INTO swap_order_products (order_id, product_id) VALUES (?, ?)', [orderId, productId]);
         }
 
         await connection.commit();
-        res.status(201).json({ id: orderId, user_ids, product_ids });
+        res.status(201).json({ id: orderId, user_ids: cleanUserIds, product_ids: cleanProductIds });
     } catch (error) {
         await connection.rollback();
         res.status(500).json({ error: 'Errore creazione ordine swap', details: error.message });
@@ -95,27 +154,45 @@ router.put('/:id', async (req, res) => {
             return res.status(404).json({ error: 'Ordine swap non trovato' });
         }
 
-        // 2. Aggiorna partecipanti se forniti
-        if (user_ids && Array.isArray(user_ids)) {
-            if (user_ids.length !== 2) {
+        // 2. Se vengono passati entrambi, esegui la validazione incrociata
+        if (user_ids && product_ids) {
+            const { isValid, errors, cleanUserIds, cleanProductIds } = await validateSwapData(connection, user_ids, product_ids);
+            if (!isValid) {
                 await connection.rollback();
-                return res.status(400).json({ error: 'L\'ordine swap deve contenere esattamente 2 utenti' });
+                return res.status(400).json({ error: errors.join(' ') });
             }
+
             await connection.execute('DELETE FROM swap_order_users WHERE order_id = ?', [id]);
-            for (const userId of user_ids) {
+            for (const userId of cleanUserIds) {
                 await connection.execute('INSERT INTO swap_order_users (order_id, user_id) VALUES (?, ?)', [id, userId]);
             }
-        }
 
-        // 3. Aggiorna prodotti partecipanti se forniti
-        if (product_ids && Array.isArray(product_ids)) {
-            if (product_ids.length !== 2) {
-                await connection.rollback();
-                return res.status(400).json({ error: 'L\'ordine swap deve contenere esattamente 2 prodotti' });
-            }
             await connection.execute('DELETE FROM swap_order_products WHERE order_id = ?', [id]);
-            for (const productId of product_ids) {
+            for (const productId of cleanProductIds) {
                 await connection.execute('INSERT INTO swap_order_products (order_id, product_id) VALUES (?, ?)', [id, productId]);
+            }
+        } else {
+            // Controlli di sicurezza parziali se inviati separatamente
+            if (user_ids && Array.isArray(user_ids)) {
+                if (user_ids.length !== 2 || user_ids[0] === user_ids[1]) {
+                    await connection.rollback();
+                    return res.status(400).json({ error: 'Devi selezionare 2 utenti distinti.' });
+                }
+                await connection.execute('DELETE FROM swap_order_users WHERE order_id = ?', [id]);
+                for (const userId of user_ids) {
+                    await connection.execute('INSERT INTO swap_order_users (order_id, user_id) VALUES (?, ?)', [id, userId]);
+                }
+            }
+
+            if (product_ids && Array.isArray(product_ids)) {
+                if (product_ids.length !== 2 || product_ids[0] === product_ids[1]) {
+                    await connection.rollback();
+                    return res.status(400).json({ error: 'Devi selezionare 2 prodotti distinti.' });
+                }
+                await connection.execute('DELETE FROM swap_order_products WHERE order_id = ?', [id]);
+                for (const productId of product_ids) {
+                    await connection.execute('INSERT INTO swap_order_products (order_id, product_id) VALUES (?, ?)', [id, productId]);
+                }
             }
         }
 
@@ -129,19 +206,30 @@ router.put('/:id', async (req, res) => {
     }
 });
 
-// DELETE /api/swaps/:id - Eliminazione ordine swap
+// DELETE /api/swaps/:id - Eliminazione ordine swap e relative relazioni
 router.delete('/:id', async (req, res) => {
+    const connection = await pool.getConnection();
     try {
         const { id } = req.params;
-        const [result] = await pool.execute('DELETE FROM swap_orders WHERE id = ?', [id]);
+        await connection.beginTransaction();
 
-        if (result.affectedRows === 0) {
+        const [orders] = await connection.execute('SELECT id FROM swap_orders WHERE id = ?', [id]);
+        if (orders.length === 0) {
+            await connection.rollback();
             return res.status(404).json({ error: 'Ordine swap non trovato' });
         }
 
-        res.json({ message: `Ordine swap #${id} eliminato con successo` });
+        await connection.execute('DELETE FROM swap_order_users WHERE order_id = ?', [id]);
+        await connection.execute('DELETE FROM swap_order_products WHERE order_id = ?', [id]);
+        await connection.execute('DELETE FROM swap_orders WHERE id = ?', [id]);
+
+        await connection.commit();
+        res.json({ message: `Ordine swap #${id} eliminato con successo`, id: Number(id) });
     } catch (error) {
+        await connection.rollback();
         res.status(500).json({ error: 'Errore durante l\'eliminazione dello swap', details: error.message });
+    } finally {
+        connection.release();
     }
 });
 
