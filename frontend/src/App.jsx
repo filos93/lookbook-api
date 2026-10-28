@@ -57,78 +57,86 @@ export default function App() {
     loadAllData();
   }, []);
 
+  // Creazione Swap con gestione corretta delle eccezioni per il banner in-line
   const handleCreateSwap = async (swapPayload) => {
-    try {
-      const res = await fetch('/api/swaps', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(swapPayload),
-      });
-      if (!res.ok) throw new Error('Errore durante la creazione dello swap');
-      await loadAllData();
-      setShowSwapBuilder(false);
-      setActiveTab('swaps');
-    } catch (err) {
-      alert(err.message);
+    const res = await fetch('/api/swaps', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(swapPayload),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.error || 'Errore durante la creazione dello swap');
     }
+
+    await loadAllData();
+    setShowSwapBuilder(false);
+    setActiveTab('swaps');
   };
 
   const handleDeleteSwap = async (id) => {
     try {
       await deleteSwap(id);
-      setSwaps(swaps.filter((s) => s.id !== id));
+      await loadAllData();
     } catch (err) {
-      alert(err.message);
+      console.error(err.message);
     }
   };
 
   const handleDeleteProduct = async (id) => {
     try {
       await deleteProduct(id);
-      setProducts(products.filter((p) => p.id !== id));
+      await loadAllData(); // Ricarica anche per aggiornare eventuali relazioni di swap
     } catch (err) {
-      alert(err.message);
+      console.error(err.message);
     }
   };
 
   const handleDeleteUser = async (id) => {
     try {
       await deleteUser(id);
-      setUsers(users.filter((u) => u.id !== id));
+      await loadAllData(); // Ricarica sia prodotti che swap eliminati in cascata sul DB
     } catch (err) {
-      alert(err.message);
+      console.error(err.message);
     }
   };
 
   const handleUpdateUser = async (userId, updatedData) => {
-    try {
-      await updateUser(userId, updatedData);
-      await loadAllData();
-      setEditingUser(null);
-    } catch (err) {
-      alert(err.message);
-    }
+    await updateUser(userId, updatedData);
+    await loadAllData();
+    setEditingUser(null);
   };
 
   const handleUpdateProduct = async (productId, updatedData) => {
-    try {
-      await updateProduct(productId, updatedData);
-      await loadAllData();
-      setEditingProduct(null);
-    } catch (err) {
-      alert(err.message);
-    }
+    await updateProduct(productId, updatedData);
+    await loadAllData();
+    setEditingProduct(null);
   };
 
+  // Calcolo dinamico del valore totale usando il valore lordo
   const totalSwappedValue = swaps.reduce((acc, swap) => {
-    const swapVal = swap.products?.reduce((pAcc, p) => pAcc + Number(p.price || 0), 0) || 0;
-    return acc + swapVal;
+    return acc + Number(swap.total_gross_value || 0);
   }, 0);
 
-  const filteredProducts = products.filter((p) =>
-    p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (p.owner_name && p.owner_name.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  // Filtraggio con sanitizzazione e ricerca flessibile (nome capo, proprietario, email o prezzo)
+  const filteredProducts = products.filter((p) => {
+    const cleanQuery = searchQuery.trim().toLowerCase().replace(/\s+/g, ' ');
+    if (!cleanQuery) return true;
+
+    const name = (p.name || '').toLowerCase();
+    const price = String(p.price || '');
+    const ownerName = (p.owner_name || '').toLowerCase();
+    const ownerEmail = (p.owner_email || '').toLowerCase();
+
+    return (
+      name.includes(cleanQuery) ||
+      price.includes(cleanQuery) ||
+      ownerName.includes(cleanQuery) ||
+      ownerEmail.includes(cleanQuery)
+    );
+  });
 
   if (loading) {
     return (
@@ -160,10 +168,10 @@ export default function App() {
         />
 
         {showSwapBuilder && (
-          <div className="mb-8 bg-[#121624] border border-[#6366f1] rounded-xl p-6 relative">
+          <div className="mb-8 bg-[#121624] border border-[#6366f1] rounded-xl p-6 relative shadow-2xl">
             <button
               onClick={() => setShowSwapBuilder(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-white font-bold"
+              className="absolute top-4 right-4 text-gray-400 hover:text-white font-bold transition"
             >
               ✕
             </button>
@@ -266,11 +274,7 @@ export default function App() {
                     ✏️
                   </button>
                   <button
-                    onClick={() => {
-                      if (confirm(`Eliminare l'utente ${u.name} ${u.surname}?`)) {
-                        handleDeleteUser(u.id);
-                      }
-                    }}
+                    onClick={() => handleDeleteUser(u.id)}
                     className="text-red-400 hover:text-red-300 hover:bg-red-950/40 p-2 rounded-lg text-sm font-bold transition"
                     title="Elimina Utente"
                   >
