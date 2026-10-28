@@ -12,6 +12,7 @@ import {
   fetchProducts, 
   fetchSwaps, 
   fetchUsers, 
+  createSwap,
   deleteSwap, 
   deleteProduct, 
   deleteUser,
@@ -57,20 +58,9 @@ export default function App() {
     loadAllData();
   }, []);
 
-  // Creazione Swap con gestione corretta delle eccezioni per il banner in-line
+  // Creazione Swap integrata con client.js (eccezione propagata al banner di SwapRecord)
   const handleCreateSwap = async (swapPayload) => {
-    const res = await fetch('/api/swaps', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(swapPayload),
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      throw new Error(data.error || 'Errore durante la creazione dello swap');
-    }
-
+    await createSwap(swapPayload);
     await loadAllData();
     setShowSwapBuilder(false);
     setActiveTab('swaps');
@@ -81,25 +71,25 @@ export default function App() {
       await deleteSwap(id);
       await loadAllData();
     } catch (err) {
-      console.error(err.message);
+      console.error('Errore eliminazione swap:', err.message);
     }
   };
 
   const handleDeleteProduct = async (id) => {
     try {
       await deleteProduct(id);
-      await loadAllData(); // Ricarica anche per aggiornare eventuali relazioni di swap
+      await loadAllData();
     } catch (err) {
-      console.error(err.message);
+      console.error('Errore eliminazione prodotto:', err.message);
     }
   };
 
   const handleDeleteUser = async (id) => {
     try {
       await deleteUser(id);
-      await loadAllData(); // Ricarica sia prodotti che swap eliminati in cascata sul DB
+      await loadAllData();
     } catch (err) {
-      console.error(err.message);
+      console.error('Errore eliminazione utente:', err.message);
     }
   };
 
@@ -121,7 +111,7 @@ export default function App() {
   }, 0);
 
   // Filtraggio con sanitizzazione e ricerca flessibile (nome capo, proprietario, email o prezzo)
-  const filteredProducts = products.filter((p) => {
+  const filteredProducts = (products || []).filter((p) => {
     const cleanQuery = searchQuery.trim().toLowerCase().replace(/\s+/g, ' ');
     if (!cleanQuery) return true;
 

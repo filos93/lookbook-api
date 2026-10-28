@@ -1,16 +1,37 @@
 const API_BASE = '/api';
 
+// Helper generico per gestire la risposta HTTP ed estrarre l'errore del backend
+async function handleResponse(res, fallbackErrorMsg) {
+  if (!res.ok) {
+    let errorData;
+    try {
+      errorData = await res.json();
+    } catch {
+      // Se la risposta non è JSON
+    }
+    throw new Error(errorData?.error || errorData?.message || fallbackErrorMsg);
+  }
+  return res.json();
+}
+
 // --- USERS ---
 export const fetchUsers = async () => {
   const res = await fetch(`${API_BASE}/users`);
-  if (!res.ok) throw new Error('Errore nel caricamento degli utenti');
-  return res.json();
+  return handleResponse(res, 'Errore nel caricamento degli utenti');
 };
+
+export async function createUser(data) {
+  const res = await fetch(`${API_BASE}/users`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  return handleResponse(res, "Errore durante la creazione dell'utente");
+}
 
 export async function deleteUser(id) {
   const res = await fetch(`${API_BASE}/users/${id}`, { method: 'DELETE' });
-  if (!res.ok) throw new Error('Errore durante l\'eliminazione dell\'utente');
-  return res.json();
+  return handleResponse(res, "Errore durante l'eliminazione dell'utente");
 }
 
 export async function updateUser(id, data) {
@@ -19,21 +40,27 @@ export async function updateUser(id, data) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error('Errore durante l\'aggiornamento dell\'utente');
-  return res.json();
+  return handleResponse(res, "Errore durante l'aggiornamento dell'utente");
 }
 
 // --- PRODUCTS ---
 export const fetchProducts = async () => {
   const res = await fetch(`${API_BASE}/products`);
-  if (!res.ok) throw new Error('Errore nel caricamento dei prodotti');
-  return res.json();
+  return handleResponse(res, 'Errore nel caricamento dei prodotti');
 };
+
+export async function createProduct(data) {
+  const res = await fetch(`${API_BASE}/products`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  return handleResponse(res, 'Errore durante la creazione del prodotto');
+}
 
 export async function deleteProduct(id) {
   const res = await fetch(`${API_BASE}/products/${id}`, { method: 'DELETE' });
-  if (!res.ok) throw new Error('Errore durante l\'eliminazione del prodotto');
-  return res.json();
+  return handleResponse(res, "Errore durante l'eliminazione del prodotto");
 }
 
 export async function updateProduct(id, data) {
@@ -42,21 +69,27 @@ export async function updateProduct(id, data) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error('Errore durante l\'aggiornamento del prodotto');
-  return res.json();
+  return handleResponse(res, "Errore durante l'aggiornamento del prodotto");
 }
 
 // --- SWAPS ---
 export const fetchSwaps = async () => {
   const res = await fetch(`${API_BASE}/swaps`);
-  if (!res.ok) throw new Error('Errore nel caricamento degli ordini swap');
-  return res.json();
+  return handleResponse(res, 'Errore nel caricamento degli ordini swap');
+};
+
+export const createSwap = async (data) => {
+  const res = await fetch(`${API_BASE}/swaps`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  return handleResponse(res, 'Errore durante la creazione dello swap');
 };
 
 export const deleteSwap = async (id) => {
   const res = await fetch(`${API_BASE}/swaps/${id}`, { method: 'DELETE' });
-  if (!res.ok) throw new Error('Errore nella cancellazione dello swap');
-  return res.json();
+  return handleResponse(res, 'Errore nella cancellazione dello swap');
 };
 
 export const updateSwap = async (id, data) => {
@@ -65,6 +98,5 @@ export const updateSwap = async (id, data) => {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error('Errore durante l\'aggiornamento dello swap');
-  return res.json();
+  return handleResponse(res, "Errore durante l'aggiornamento dello swap");
 };
