@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 // Regex client: ammette lettere (anche accentate), spazi, apostrofi e trattini (no cifre/caratteri speciali)
 const NAME_REGEX = /^[A-Za-zÀ-ÖØ-öø-ÿ\s'-]+$/;
@@ -9,6 +9,16 @@ export default function EditUserModal({ user, onClose, onSave }) {
   const [email, setEmail] = useState(user?.email || '');
   const [errorMessage, setErrorMessage] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Sincronizza lo stato locale se cambia l'utente passato come prop
+  useEffect(() => {
+    if (user) {
+      setName(user.name || '');
+      setSurname(user.surname || '');
+      setEmail(user.email || '');
+      setErrorMessage('');
+    }
+  }, [user]);
 
   if (!user) return null;
 
@@ -66,7 +76,8 @@ export default function EditUserModal({ user, onClose, onSave }) {
         {/* Pulsante Chiusura */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-white font-bold text-lg transition"
+          disabled={loading}
+          className="absolute top-4 right-4 text-gray-400 hover:text-white font-bold text-lg transition disabled:opacity-50"
         >
           ✕
         </button>
@@ -94,11 +105,12 @@ export default function EditUserModal({ user, onClose, onSave }) {
             <input
               type="text"
               required
+              disabled={loading}
               minLength={2}
               maxLength={50}
               value={name}
               onChange={(e) => handleNameChange(setName, e.target.value)}
-              className="w-full bg-[#0b0e17] border border-[#1f263e] rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-[#4f46e5] text-sm transition"
+              className="w-full bg-[#0b0e17] border border-[#1f263e] rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-[#4f46e5] text-sm transition disabled:opacity-50"
             />
           </div>
 
@@ -109,11 +121,12 @@ export default function EditUserModal({ user, onClose, onSave }) {
             <input
               type="text"
               required
+              disabled={loading}
               minLength={2}
               maxLength={50}
               value={surname}
               onChange={(e) => handleNameChange(setSurname, e.target.value)}
-              className="w-full bg-[#0b0e17] border border-[#1f263e] rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-[#4f46e5] text-sm transition"
+              className="w-full bg-[#0b0e17] border border-[#1f263e] rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-[#4f46e5] text-sm transition disabled:opacity-50"
             />
           </div>
 
@@ -124,9 +137,10 @@ export default function EditUserModal({ user, onClose, onSave }) {
             <input
               type="email"
               required
+              disabled={loading}
               value={email}
               onChange={(e) => handleEmailChange(e.target.value)}
-              className="w-full bg-[#0b0e17] border border-[#1f263e] rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-[#4f46e5] text-sm transition"
+              className="w-full bg-[#0b0e17] border border-[#1f263e] rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-[#4f46e5] text-sm transition disabled:opacity-50"
             />
           </div>
 
@@ -135,7 +149,8 @@ export default function EditUserModal({ user, onClose, onSave }) {
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-lg text-sm font-semibold text-gray-400 hover:bg-[#1b2238] hover:text-white transition"
+              disabled={loading}
+              className="px-4 py-2 rounded-lg text-sm font-semibold text-gray-400 hover:bg-[#1b2238] hover:text-white transition disabled:opacity-50"
             >
               Annulla
             </button>

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createUser } from '../api/client';
 
 // Regex client per consentire lettere (anche accentate), spazi, apostrofi e trattini (no cifre/caratteri speciali)
 const NAME_REGEX = /^[A-Za-zÀ-ÖØ-öø-ÿ\s'-]+$/;
@@ -52,17 +53,7 @@ export default function UserRegisterModal({ isOpen, onClose, onUserCreated }) {
         email: trimmedEmail
       };
 
-      const res = await fetch('/api/users', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || 'Errore durante la registrazione dell\'utente');
-      }
+      const data = await createUser(payload);
 
       if (onUserCreated) onUserCreated(data);
       
@@ -87,7 +78,8 @@ export default function UserRegisterModal({ isOpen, onClose, onUserCreated }) {
           </div>
           <button 
             onClick={onClose} 
-            className="text-gray-400 hover:text-white font-bold text-lg transition"
+            disabled={loading}
+            className="text-gray-400 hover:text-white font-bold text-lg transition disabled:opacity-50"
           >
             ✕
           </button>
@@ -110,11 +102,12 @@ export default function UserRegisterModal({ isOpen, onClose, onUserCreated }) {
             <input
               type="text"
               required
+              disabled={loading}
               minLength={2}
               maxLength={50}
               value={formData.name}
               onChange={(e) => handleNameChange('name', e.target.value)}
-              className="w-full bg-[#0b0e17] text-white text-sm rounded-lg px-3 py-2.5 border border-[#1f263e] focus:outline-none focus:border-[#6366f1] placeholder-gray-600 transition"
+              className="w-full bg-[#0b0e17] text-white text-sm rounded-lg px-3 py-2.5 border border-[#1f263e] focus:outline-none focus:border-[#6366f1] placeholder-gray-600 transition disabled:opacity-50"
               placeholder="Es. Mario"
             />
           </div>
@@ -126,11 +119,12 @@ export default function UserRegisterModal({ isOpen, onClose, onUserCreated }) {
             <input
               type="text"
               required
+              disabled={loading}
               minLength={2}
               maxLength={50}
               value={formData.surname}
               onChange={(e) => handleNameChange('surname', e.target.value)}
-              className="w-full bg-[#0b0e17] text-white text-sm rounded-lg px-3 py-2.5 border border-[#1f263e] focus:outline-none focus:border-[#6366f1] placeholder-gray-600 transition"
+              className="w-full bg-[#0b0e17] text-white text-sm rounded-lg px-3 py-2.5 border border-[#1f263e] focus:outline-none focus:border-[#6366f1] placeholder-gray-600 transition disabled:opacity-50"
               placeholder="Es. Rossi"
             />
           </div>
@@ -142,9 +136,10 @@ export default function UserRegisterModal({ isOpen, onClose, onUserCreated }) {
             <input
               type="email"
               required
+              disabled={loading}
               value={formData.email}
               onChange={(e) => handleEmailChange(e.target.value)}
-              className="w-full bg-[#0b0e17] text-white text-sm rounded-lg px-3 py-2.5 border border-[#1f263e] focus:outline-none focus:border-[#6366f1] placeholder-gray-600 transition"
+              className="w-full bg-[#0b0e17] text-white text-sm rounded-lg px-3 py-2.5 border border-[#1f263e] focus:outline-none focus:border-[#6366f1] placeholder-gray-600 transition disabled:opacity-50"
               placeholder="mario.rossi99@example.com"
             />
           </div>
@@ -154,7 +149,8 @@ export default function UserRegisterModal({ isOpen, onClose, onUserCreated }) {
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-lg text-xs font-semibold text-gray-400 hover:text-white hover:bg-[#1b2238] transition"
+              disabled={loading}
+              className="px-4 py-2 rounded-lg text-xs font-semibold text-gray-400 hover:text-white hover:bg-[#1b2238] transition disabled:opacity-50"
             >
               Annulla
             </button>

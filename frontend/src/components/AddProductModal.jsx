@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createProduct } from '../api/client';
 
 export default function AddProductModal({ isOpen, onClose, users = [], onProductCreated }) {
   const [formData, setFormData] = useState({ name: '', price: '', user_id: '', photo_url: '' });
@@ -46,17 +47,7 @@ export default function AddProductModal({ isOpen, onClose, users = [], onProduct
         photos: trimmedPhotoUrl ? [trimmedPhotoUrl] : []
       };
 
-      const res = await fetch('/api/products', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || 'Errore durante la creazione del capo');
-      }
+      const data = await createProduct(payload);
 
       if (onProductCreated) onProductCreated(data);
 
@@ -81,7 +72,8 @@ export default function AddProductModal({ isOpen, onClose, users = [], onProduct
           </div>
           <button 
             onClick={onClose} 
-            className="text-gray-400 hover:text-white font-bold text-lg transition"
+            disabled={loading}
+            className="text-gray-400 hover:text-white font-bold text-lg transition disabled:opacity-50"
           >
             ✕
           </button>
@@ -104,11 +96,12 @@ export default function AddProductModal({ isOpen, onClose, users = [], onProduct
             <input
               type="text"
               required
+              disabled={loading}
               minLength={2}
               maxLength={100}
               value={formData.name}
               onChange={(e) => handleChange('name', e.target.value)}
-              className="w-full bg-[#0b0e17] text-white text-sm rounded-lg px-3 py-2.5 border border-[#1f263e] focus:outline-none focus:border-[#6366f1] placeholder-gray-600 transition"
+              className="w-full bg-[#0b0e17] text-white text-sm rounded-lg px-3 py-2.5 border border-[#1f263e] focus:outline-none focus:border-[#6366f1] placeholder-gray-600 transition disabled:opacity-50"
               placeholder="Es. Giacca di pelle vintage"
             />
           </div>
@@ -119,9 +112,10 @@ export default function AddProductModal({ isOpen, onClose, users = [], onProduct
             </label>
             <select
               required
+              disabled={loading}
               value={formData.user_id}
               onChange={(e) => handleChange('user_id', e.target.value)}
-              className="w-full bg-[#0b0e17] text-white text-sm rounded-lg px-3 py-2.5 border border-[#1f263e] focus:outline-none focus:border-[#6366f1] transition"
+              className="w-full bg-[#0b0e17] text-white text-sm rounded-lg px-3 py-2.5 border border-[#1f263e] focus:outline-none focus:border-[#6366f1] transition disabled:opacity-50"
             >
               <option value="">-- Seleziona un utente --</option>
               {users.map((u) => (
@@ -141,9 +135,10 @@ export default function AddProductModal({ isOpen, onClose, users = [], onProduct
               step="0.01"
               min="0"
               required
+              disabled={loading}
               value={formData.price}
               onChange={(e) => handleChange('price', e.target.value)}
-              className="w-full bg-[#0b0e17] text-white text-sm rounded-lg px-3 py-2.5 border border-[#1f263e] focus:outline-none focus:border-[#6366f1] placeholder-gray-600 transition"
+              className="w-full bg-[#0b0e17] text-white text-sm rounded-lg px-3 py-2.5 border border-[#1f263e] focus:outline-none focus:border-[#6366f1] placeholder-gray-600 transition disabled:opacity-50"
               placeholder="Es. 45.00"
             />
           </div>
@@ -154,9 +149,10 @@ export default function AddProductModal({ isOpen, onClose, users = [], onProduct
             </label>
             <input
               type="url"
+              disabled={loading}
               value={formData.photo_url}
               onChange={(e) => handleChange('photo_url', e.target.value)}
-              className="w-full bg-[#0b0e17] text-white text-sm rounded-lg px-3 py-2.5 border border-[#1f263e] focus:outline-none focus:border-[#6366f1] placeholder-gray-600 transition"
+              className="w-full bg-[#0b0e17] text-white text-sm rounded-lg px-3 py-2.5 border border-[#1f263e] focus:outline-none focus:border-[#6366f1] placeholder-gray-600 transition disabled:opacity-50"
               placeholder="https://images.unsplash.com/..."
             />
           </div>
@@ -166,7 +162,8 @@ export default function AddProductModal({ isOpen, onClose, users = [], onProduct
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-lg text-xs font-semibold text-gray-400 hover:text-white hover:bg-[#1b2238] transition"
+              disabled={loading}
+              className="px-4 py-2 rounded-lg text-xs font-semibold text-gray-400 hover:text-white hover:bg-[#1b2238] transition disabled:opacity-50"
             >
               Annulla
             </button>

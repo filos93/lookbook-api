@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function EditProductModal({ product, users = [], onClose, onSave }) {
   const [name, setName] = useState(product?.name || '');
@@ -9,6 +9,17 @@ export default function EditProductModal({ product, users = [], onClose, onSave 
   );
   const [errorMessage, setErrorMessage] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Sincronizza lo stato se la prop product cambia
+  useEffect(() => {
+    if (product) {
+      setName(product.name || '');
+      setPrice(product.price || '');
+      setUserId(product.user_id || '');
+      setPhotoUrl(product.photos && product.photos.length > 0 ? product.photos[0] : '');
+      setErrorMessage('');
+    }
+  }, [product]);
 
   if (!product) return null;
 
@@ -63,7 +74,8 @@ export default function EditProductModal({ product, users = [], onClose, onSave 
         {/* Pulsante Chiusura */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-white font-bold text-lg transition"
+          disabled={loading}
+          className="absolute top-4 right-4 text-gray-400 hover:text-white font-bold text-lg transition disabled:opacity-50"
         >
           ✕
         </button>
@@ -91,6 +103,7 @@ export default function EditProductModal({ product, users = [], onClose, onSave 
             <input
               type="text"
               required
+              disabled={loading}
               minLength={2}
               maxLength={100}
               value={name}
@@ -98,7 +111,7 @@ export default function EditProductModal({ product, users = [], onClose, onSave 
                 setName(e.target.value);
                 if (errorMessage) setErrorMessage('');
               }}
-              className="w-full bg-[#0b0e17] border border-[#1f263e] rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-[#4f46e5] text-sm transition"
+              className="w-full bg-[#0b0e17] border border-[#1f263e] rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-[#4f46e5] text-sm transition disabled:opacity-50"
             />
           </div>
 
@@ -111,12 +124,13 @@ export default function EditProductModal({ product, users = [], onClose, onSave 
               step="0.01"
               min="0"
               required
+              disabled={loading}
               value={price}
               onChange={(e) => {
                 setPrice(e.target.value);
                 if (errorMessage) setErrorMessage('');
               }}
-              className="w-full bg-[#0b0e17] border border-[#1f263e] rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-[#4f46e5] text-sm transition"
+              className="w-full bg-[#0b0e17] border border-[#1f263e] rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-[#4f46e5] text-sm transition disabled:opacity-50"
             />
           </div>
 
@@ -126,11 +140,12 @@ export default function EditProductModal({ product, users = [], onClose, onSave 
             </label>
             <select
               value={userId}
+              disabled={loading}
               onChange={(e) => {
                 setUserId(e.target.value);
                 if (errorMessage) setErrorMessage('');
               }}
-              className="w-full bg-[#0b0e17] border border-[#1f263e] rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-[#4f46e5] text-sm transition"
+              className="w-full bg-[#0b0e17] border border-[#1f263e] rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-[#4f46e5] text-sm transition disabled:opacity-50"
             >
               <option value="">-- Seleziona un utente --</option>
               {users.map((u) => (
@@ -147,13 +162,14 @@ export default function EditProductModal({ product, users = [], onClose, onSave 
             </label>
             <input
               type="url"
+              disabled={loading}
               placeholder="https://images.unsplash.com/..."
               value={photoUrl}
               onChange={(e) => {
                 setPhotoUrl(e.target.value);
                 if (errorMessage) setErrorMessage('');
               }}
-              className="w-full bg-[#0b0e17] border border-[#1f263e] rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-[#4f46e5] text-sm transition"
+              className="w-full bg-[#0b0e17] border border-[#1f263e] rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-[#4f46e5] text-sm transition disabled:opacity-50"
             />
           </div>
 
@@ -162,7 +178,8 @@ export default function EditProductModal({ product, users = [], onClose, onSave 
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-lg text-sm font-semibold text-gray-400 hover:bg-[#1b2238] hover:text-white transition"
+              disabled={loading}
+              className="px-4 py-2 rounded-lg text-sm font-semibold text-gray-400 hover:bg-[#1b2238] hover:text-white transition disabled:opacity-50"
             >
               Annulla
             </button>
