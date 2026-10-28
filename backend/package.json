@@ -8,6 +8,7 @@
   },
   "scripts": {
     "start": "node server.js",
+    "init-db": "node config/init-db.js",
     "dev": "nodemon server.js",
     "test": "mocha --exit \"tests/**/*.test.js\""
   },
