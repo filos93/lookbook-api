@@ -3,6 +3,7 @@ import { useState } from 'react';
 export default function SwapRecord({ products = [], onCreateSwap }) {
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [errorMessage, setErrorMessage] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   const toggleSelectProduct = (product) => {
     if (errorMessage) setErrorMessage('');
@@ -49,6 +50,8 @@ export default function SwapRecord({ products = [], onCreateSwap }) {
       return;
     }
 
+    setSubmitting(true);
+
     try {
       const userIds = [p1.user_id, p2.user_id];
       const productIds = [p1.id, p2.id];
@@ -57,6 +60,8 @@ export default function SwapRecord({ products = [], onCreateSwap }) {
       setSelectedProducts([]);
     } catch (err) {
       setErrorMessage(err.message || 'Errore durante la creazione dello swap.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -89,12 +94,14 @@ export default function SwapRecord({ products = [], onCreateSwap }) {
             selectedProducts[0].user_id === p.user_id &&
             !isSelected;
 
+          const isCardDisabled = isSameUserAsSelected || submitting;
+
           return (
             <div
               key={p.id}
-              onClick={() => !isSameUserAsSelected && toggleSelectProduct(p)}
+              onClick={() => !isCardDisabled && toggleSelectProduct(p)}
               className={`p-3.5 border rounded-xl transition flex justify-between items-center ${
-                isSameUserAsSelected
+                isCardDisabled
                   ? 'opacity-40 cursor-not-allowed border-[#1f263e] bg-[#0b0e17]'
                   : isSelected
                   ? 'border-[#10b981] bg-[#10b981]/10 text-white font-semibold'
@@ -115,7 +122,7 @@ export default function SwapRecord({ products = [], onCreateSwap }) {
               <input
                 type="checkbox"
                 checked={isSelected}
-                disabled={isSameUserAsSelected}
+                disabled={isCardDisabled}
                 readOnly
                 className="w-4 h-4 rounded accent-[#10b981] cursor-pointer"
               />
@@ -127,14 +134,14 @@ export default function SwapRecord({ products = [], onCreateSwap }) {
       {/* Pulsante di Conferma */}
       <button
         onClick={handleSubmit}
-        disabled={selectedProducts.length !== 2}
+        disabled={selectedProducts.length !== 2 || submitting}
         className={`w-full py-2.5 px-4 rounded-xl font-bold text-xs transition shadow-lg ${
-          selectedProducts.length === 2
+          selectedProducts.length === 2 && !submitting
             ? 'bg-[#10b981] hover:bg-[#059669] text-white shadow-emerald-500/20 active:scale-[0.99]'
             : 'bg-[#1f263e] text-gray-500 cursor-not-allowed'
         }`}
       >
-        Conferma Ordine Swap ({selectedProducts.length}/2)
+        {submitting ? 'Creazione Swap in corso...' : `Conferma Ordine Swap (${selectedProducts.length}/2)`}
       </button>
     </div>
   );

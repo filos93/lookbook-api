@@ -1,7 +1,22 @@
 export default function ProductCard({ product, onDelete, onEdit, onSwapClick }) {
+  if (!product) return null;
+
   const { id, name, price, owner_name, photos } = product;
-  const coverImage = photos && photos.length > 0 
-    ? photos[0] 
+
+  // Parsing sicuro per photos (sia se arriva come array, sia come stringa JSON da MySQL)
+  let photoList = [];
+  if (Array.isArray(photos)) {
+    photoList = photos;
+  } else if (typeof photos === 'string' && photos.trim() !== '') {
+    try {
+      photoList = JSON.parse(photos);
+    } catch {
+      photoList = [photos];
+    }
+  }
+
+  const coverImage = photoList && photoList.length > 0 && photoList[0]
+    ? photoList[0] 
     : 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?auto=format&fit=crop&q=80&w=600';
 
   return (
@@ -39,12 +54,16 @@ export default function ProductCard({ product, onDelete, onEdit, onSwapClick }) 
           </div>
 
           <span className="absolute top-3 right-3 bg-[#6366f1] text-white text-xs font-bold px-2.5 py-1 rounded-md z-10 shadow-md">
-            €{Number(price).toFixed(2)}
+            €{Number(price || 0).toFixed(2)}
           </span>
           <img
             src={coverImage}
-            alt={name}
+            alt={name || 'Capo LookBook'}
             className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+            onError={(e) => {
+              // Fallback automatico se l'URL dell'immagine è rotto/non raggiungibile
+              e.target.src = 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?auto=format&fit=crop&q=80&w=600';
+            }}
           />
         </div>
 

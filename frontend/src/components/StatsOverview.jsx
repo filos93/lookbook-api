@@ -3,7 +3,7 @@ export default function StatsOverview({ totalProducts = 0, totalSwaps = 0, total
     { label: 'CAPI IN CATALOGO', value: totalProducts, icon: '👕', iconBg: 'bg-indigo-950/60 text-indigo-400' },
     { label: 'ORDINI SWAP', value: totalSwaps, icon: '⇄', iconBg: 'bg-emerald-950/60 text-emerald-400' },
     { label: 'UTENTI ATTIVI', value: totalUsers, icon: '👥', iconBg: 'bg-purple-950/60 text-purple-400' },
-    { label: 'VALORE SCAMBIATO', value: `€${Number(totalValue).toFixed(2)}`, icon: '💵', iconBg: 'bg-amber-950/60 text-amber-400' },
+    { label: 'VALORE SCAMBIATO', value: `€${Number(totalValue || 0).toFixed(2)}`, icon: '💵', iconBg: 'bg-amber-950/60 text-amber-400' },
   ];
 
   return (
