@@ -66,14 +66,24 @@ export default function App() {
     setActiveTab('swaps');
   };
 
-  const handleDeleteSwap = async (id) => {
+  // Delete Swap con aggiornamento dello stato dei prodotti coinvolti
+  const handleDeleteSwap = async (swapId) => {
     try {
-      await deleteSwap(id);
-      await loadAllData();
+      // Chiamata API al backend
+      await deleteSwap(swapId);
+
+      // 1. Rimuovi lo swap eliminato dallo stato locale
+      setSwaps((prevSwaps) => prevSwaps.filter((s) => s.id !== swapId));
+
+      // 2. Ricarica la lista prodotti per aggiornare lo status da 'swapped' ad 'available'
+      const updatedProducts = await fetchProducts();
+      setProducts(updatedProducts);
+
     } catch (err) {
-      console.error('Errore eliminazione swap:', err.message);
+      alert(`Impossibile eliminare lo swap: ${err.message}`);
     }
   };
+
 
   const handleDeleteProduct = async (id) => {
     try {
@@ -84,12 +94,21 @@ export default function App() {
     }
   };
 
-  const handleDeleteUser = async (id) => {
+  const handleDeleteUser = async (user) => {
+    const confirmed = window.confirm(
+      `Sei sicuro di voler eliminare l'utente "${user.name} ${user.surname}"?\n\n` +
+      `⚠️ ATTENZIONE: Tutti i suoi capi e gli ordini di swap a cui ha partecipato verranno eliminati. ` +
+      `Il conteggio e il valore totale scambiato verranno ricalcolati.`
+    );
+
+    if (!confirmed) return;
+
     try {
-      await deleteUser(id);
-      await loadAllData();
+      await deleteUser(user.id);
+      // Ricarica la lista utenti, prodotti e swap per aggiornare i totali
+      await refreshAllData();
     } catch (err) {
-      console.error('Errore eliminazione utente:', err.message);
+      alert(`Errore eliminazione utente: ${err.message}`);
     }
   };
 

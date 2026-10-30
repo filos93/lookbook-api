@@ -126,7 +126,7 @@ router.post('/', async (req, res) => {
     }
 });
 
-// DELETE /api/users/:id - Eliminazione utente e prodotti/dipendenze
+// DELETE /api/users/:id - Eliminazione utente in cascata con pulizia swap
 router.delete('/:id', async (req, res) => {
     const { id } = req.params;
     const connection = await pool.getConnection();
@@ -134,28 +134,62 @@ router.delete('/:id', async (req, res) => {
     try {
         await connection.beginTransaction();
 
-        // 1. Verifica esistenza utente
-        const [users] = await connection.execute('SELECT id FROM users WHERE id = ?', [id]);
+        // 1. Verifica che l'utente esista
+        const [users] = await connection.execute('SELECT id, name FROM users WHERE id = ?', [id]);
         if (users.length === 0) {
             await connection.rollback();
             return res.status(404).json({ error: 'Utente non trovato' });
         }
 
-        // 2. Elimina le foto dei prodotti appartenenti all'utente
-        await connection.execute(`
-            DELETE pp FROM product_photos pp
-            INNER JOIN products p ON pp.product_id = p.id
-            WHERE p.user_id = ?
-        `, [id]);
+        // 2. Recupera tutti gli ordini swap a cui l'utente partecipa
+        const [userSwaps] = await connection.execute(
+            'SELECT order_id FROM swap_order_users WHERE user_id = ?',
+            [id]
+        );
+        const swapIds = userSwaps.map(s => s.order_id);
 
-        // 3. Elimina i prodotti dell'utente
-        await connection.execute('DELETE FROM products WHERE user_id = ?', [id]);
+        if (swapIds.length > 0) {
+            const swapPlaceholders = swapIds.map(() => '?').join(',');
+
+            // 2a. Trova tutti i prodotti legati a questi swap
+            const [swapProducts] = await connection.execute(
+                `SELECT product_id FROM swap_order_products WHERE order_id IN (${swapPlaceholders})`,
+                swapIds
+            );
+            const productIds = swapProducts.map(p => p.product_id);
+
+            // 2b. Ripristina lo stato a 'available' per i prodotti coinvolti
+            if (productIds.length > 0) {
+                const prodPlaceholders = productIds.map(() => '?').join(',');
+                await connection.execute(
+                    `UPDATE products SET status = 'available' WHERE id IN (${prodPlaceholders})`,
+                    productIds
+                );
+            }
+
+            // 2c. Rimuovi le relazioni e gli ordini swap correlati
+            await connection.execute(`DELETE FROM swap_order_users WHERE order_id IN (${swapPlaceholders})`, swapIds);
+            await connection.execute(`DELETE FROM swap_order_products WHERE order_id IN (${swapPlaceholders})`, swapIds);
+            await connection.execute(`DELETE FROM swap_orders WHERE id IN (${swapPlaceholders})`, swapIds);
+        }
+
+        // 3. Elimina foto e prodotti appartenenti all'utente eliminato
+        const [userProducts] = await connection.execute('SELECT id FROM products WHERE user_id = ?', [id]);
+        if (userProducts.length > 0) {
+            const userProdIds = userProducts.map(p => p.id);
+            const userProdPlaceholders = userProdIds.map(() => '?').join(',');
+
+            await connection.execute(`DELETE FROM product_photos WHERE product_id IN (${userProdPlaceholders})`, userProdIds);
+            await connection.execute('DELETE FROM products WHERE user_id = ?', [id]);
+        }
 
         // 4. Elimina l'utente
         await connection.execute('DELETE FROM users WHERE id = ?', [id]);
 
         await connection.commit();
-        res.json({ message: 'Utente ed eventuali prodotti correlati eliminati con successo', id: parseInt(id, 10) });
+        res.json({ 
+            message: `Utente #${id} eliminato. Gli swap a cui partecipava sono stati annullati e il valore totale ricalcolato.` 
+        });
     } catch (error) {
         await connection.rollback();
         res.status(500).json({ error: 'Errore durante l\'eliminazione dell\'utente', details: error.message });

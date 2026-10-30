@@ -110,13 +110,13 @@ router.get('/', async (req, res) => {
     }
 });
 
-// POST /api/swaps - Creazione ordine swap e aggiornamento prodotti a 'swapped'
+// POST /api/swaps - Creazione ordine swap
 router.post('/', async (req, res) => {
     const connection = await pool.getConnection();
     try {
         const { user_ids, product_ids } = req.body;
 
-        // Validazione stringente (incluso controllo status = 'swapped')
+        // Validazione stringente
         const { isValid, errors, cleanUserIds, cleanProductIds } = await validateSwapData(connection, user_ids, product_ids);
         if (!isValid) {
             connection.release();
@@ -136,18 +136,23 @@ router.post('/', async (req, res) => {
             await connection.execute('INSERT INTO swap_order_products (order_id, product_id) VALUES (?, ?)', [orderId, productId]);
         }
 
-        // AGGIORNAMENTO STATO PRODOTTI A 'swapped'
-        await connection.execute('UPDATE products SET status = "swapped" WHERE id IN (?, ?)', cleanProductIds);
+        // --- OPZIONE CONSIGLIATA: Parametro posizionale (sicuro al 100%) ---
+        await connection.execute(
+            'UPDATE products SET status = ? WHERE id IN (?, ?)', 
+            ['swapped', cleanProductIds[0], cleanProductIds[1]]
+        );
 
         await connection.commit();
         res.status(201).json({ id: orderId, user_ids: cleanUserIds, product_ids: cleanProductIds });
     } catch (error) {
         await connection.rollback();
+        console.error('Errore durante la creazione dello swap:', error); // Log per vedere dettagli nel terminale
         res.status(500).json({ error: 'Errore creazione ordine swap', details: error.message });
     } finally {
         connection.release();
     }
 });
+
 
 // PUT /api/swaps/:id - Modifica utenti o prodotti partecipanti allo swap
 router.put('/:id', async (req, res) => {
@@ -206,23 +211,29 @@ router.delete('/:id', async (req, res) => {
             return res.status(404).json({ error: 'Ordine swap non trovato' });
         }
 
-        // Recupera i prodotti legati all'ordine per ripristinarne lo stato
+        // 1. Recupera i prodotti legati all'ordine per ripristinarne lo stato
         const [products] = await connection.execute('SELECT product_id FROM swap_order_products WHERE order_id = ?', [id]);
         const productIds = products.map(p => p.product_id);
 
+        // 2. Elimina le relazioni e l'ordine
         await connection.execute('DELETE FROM swap_order_users WHERE order_id = ?', [id]);
         await connection.execute('DELETE FROM swap_order_products WHERE order_id = ?', [id]);
         await connection.execute('DELETE FROM swap_orders WHERE id = ?', [id]);
 
-        // RIPRISTINO STATO PRODOTTI A 'available'
+        // 3. RIPRISTINO STATO PRODOTTI A 'available' (Usa ? per evitare syntax error MySQL)
         if (productIds.length > 0) {
-            await connection.execute(`UPDATE products SET status = "available" WHERE id IN (${productIds.map(() => '?').join(',')})`, productIds);
+            const placeholders = productIds.map(() => '?').join(',');
+            await connection.execute(
+                `UPDATE products SET status = ? WHERE id IN (${placeholders})`,
+                ['available', ...productIds]
+            );
         }
 
         await connection.commit();
         res.json({ message: `Ordine swap #${id} eliminato con successo`, id: Number(id) });
     } catch (error) {
         await connection.rollback();
+        console.error('Errore durante eliminazione swap:', error);
         res.status(500).json({ error: 'Errore durante l\'eliminazione dello swap', details: error.message });
     } finally {
         connection.release();

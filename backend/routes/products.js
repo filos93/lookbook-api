@@ -163,6 +163,13 @@ router.put('/:id', async (req, res) => {
 
         const currentProduct = products[0];
 
+        if (currentProduct.status === 'swapped') {
+            await connection.rollback();
+            return res.status(400).json({ 
+                error: 'Non puoi modificare le informazioni di un capo che risulta già scambiato.' 
+            });
+        }
+
         if (cleanData.user_id !== undefined && cleanData.user_id !== currentProduct.user_id) {
             const [users] = await connection.execute('SELECT id FROM users WHERE id = ?', [cleanData.user_id]);
             if (users.length === 0) {

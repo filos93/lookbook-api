@@ -48,14 +48,16 @@ export default function ProductCard({ product, onDelete, onEdit, onSwapClick }) 
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  onEdit(product);
+                  if (!isSwapped) onEdit(product);
                 }}
-                className="bg-indigo-600/80 hover:bg-indigo-600 text-white text-xs font-bold w-7 h-7 rounded-full flex items-center justify-center backdrop-blur-md transition"
-                title="Modifica prodotto"
+                disabled={isSwapped}
+                className="bg-indigo-600/80 hover:bg-indigo-600 text-white text-xs font-bold w-7 h-7 rounded-full flex items-center justify-center backdrop-blur-md transition disabled:opacity-40 disabled:cursor-not-allowed"
+                title={isSwapped ? "Impossibile modificare un capo già scambiato" : "Modifica prodotto"}
               >
                 ✏️
               </button>
             )}
+
           </div>
 
           {/* Prezzo in alto a destra */}
