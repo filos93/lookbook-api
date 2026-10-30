@@ -21,58 +21,64 @@ describe('API Swap Orders (/api/swaps)', () => {
 
   // 1. Test GET /api/swaps
   test('GET /api/swaps - Recupera l\'elenco degli ordini swap', async () => {
-    const mockSwaps = [
-      { id: 1, created_at: '2026-10-30T10:00:00.000Z' }
-    ];
+    const mockSwaps = [{ id: 1, created_at: '2026-10-30T10:00:00.000Z' }];
+    const mockUsers = [{ id: 1, name: 'Mario', email: 'mario@test.com' }];
+    const mockProducts = [{ id: 10, name: 'Giacca', price: '50.00', status: 'swapped' }];
 
-    // Intercetta sia query che execute
-    sinon.stub(pool, 'query').callsFake(async () => [mockSwaps, []]);
-    if (pool.execute) {
-      sinon.stub(pool, 'execute').callsFake(async () => [mockSwaps, []]);
-    }
+    // Stub per le sub-query sequenziali della GET
+    const executeStub = sinon.stub(pool, 'execute');
+    executeStub.onFirstCall().resolves([mockSwaps, []]);    // Query principale swap_orders
+    executeStub.onSecondCall().resolves([mockUsers, []]);   // Query swap_order_users
+    executeStub.onThirdCall().resolves([mockProducts, []]); // Query swap_order_products
 
     const res = await request(app).get('/api/swaps');
 
     expect(res.statusCode).toEqual(200);
     expect(Array.isArray(res.body)).toBe(true);
-    expect(res.body.length).toBeGreaterThan(0);
+    expect(res.body.length).toBe(1);
     expect(res.body[0].id).toBe(1);
+    expect(res.body[0].total_gross_value).toBe('50.00');
   });
 
   // 2. Test DELETE /api/swaps/:id
   test('DELETE /api/swaps/:id - Elimina un ordine swap non esistente', async () => {
-    sinon.stub(pool, 'query').callsFake(async () => [{ affectedRows: 0 }, []]);
-    if (pool.execute) {
-      sinon.stub(pool, 'execute').callsFake(async () => [{ affectedRows: 0 }, []]);
-    }
-
-    const res = await request(app).delete('/api/swaps/999999');
-
-    expect(res.statusCode).toEqual(404);
-    expect(res.body).toHaveProperty('error', 'Ordine swap non trovato');
-  });
-
-  // 3. Test POST /api/swaps
-  test('POST /api/swaps - Rifiuta lo swap se un prodotto è già swapped', async () => {
     const mockConnection = {
       beginTransaction: sinon.stub().resolves(),
-      query: sinon.stub(),
       execute: sinon.stub(),
       rollback: sinon.stub().resolves(),
       release: sinon.stub().resolves()
     };
 
-    // Simula la SELECT iniziale sulla connessione
-    const mockProductSelect = [
+    // Simula che l'ordine non esista (array vuoto)
+    mockConnection.execute.onFirstCall().resolves([[], []]);
+
+    sinon.stub(pool, 'getConnection').resolves(mockConnection);
+
+    const res = await request(app).delete('/api/swaps/999999');
+
+    expect(res.statusCode).toEqual(404);
+    expect(res.body).toHaveProperty('error', 'Ordine swap non trovato');
+    expect(mockConnection.rollback.calledOnce).toBe(true);
+    expect(mockConnection.release.calledOnce).toBe(true);
+  });
+
+  // 3. Test POST /api/swaps (Blocco se un prodotto è 'swapped')
+  test('POST /api/swaps - Rifiuta lo swap se un prodotto è già swapped', async () => {
+    const mockConnection = {
+      beginTransaction: sinon.stub().resolves(),
+      execute: sinon.stub(),
+      rollback: sinon.stub().resolves(),
+      release: sinon.stub().resolves()
+    };
+
+    // Simula la SELECT di validateSwapData() dove il prodotto 10 ha status = 'swapped'
+    mockConnection.execute.onFirstCall().resolves([
       [
-        { id: 10, name: 'Giacca Vintage', status: 'swapped' },
-        { id: 12, name: 'T-Shirt Silk', status: 'available' }
+        { id: 10, user_id: 1, status: 'swapped', name: 'Giacca Vintage' },
+        { id: 12, user_id: 2, status: 'available', name: 'T-Shirt Silk' }
       ],
       []
-    ];
-
-    mockConnection.query.resolves(mockProductSelect);
-    mockConnection.execute.resolves(mockProductSelect);
+    ]);
 
     sinon.stub(pool, 'getConnection').resolves(mockConnection);
 
@@ -80,9 +86,10 @@ describe('API Swap Orders (/api/swaps)', () => {
       .post('/api/swaps')
       .send({ user_ids: [1, 2], product_ids: [10, 12] });
 
-    expect(res.statusCode).toBeGreaterThanOrEqual(400);
-    expect(mockConnection.rollback.calledOnce).toBe(true);
-    expect(mockConnection.release.calledOnce).toBe(true);
+    // Verifichiamo che la validazione blocchi lo swap con stato 400 e il messaggio relativo allo status
+    expect(res.statusCode).toEqual(400);
+    expect(res.body).toHaveProperty('error');
+    expect(res.body.error).toContain('non è più disponibile');
   });
 
 });

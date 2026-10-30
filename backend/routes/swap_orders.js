@@ -33,9 +33,9 @@ async function validateSwapData(connection, userIds, productIds) {
         return { isValid: false, errors };
     }
 
-    // 4. Verifica esistenza e proprietà dei prodotti sul DB
+    // 4. Verifica esistenza, proprietà e STATO dei prodotti sul DB
     const [products] = await connection.execute(
-        'SELECT id, user_id FROM products WHERE id IN (?, ?)',
+        'SELECT id, user_id, status, name FROM products WHERE id IN (?, ?)',
         [p1, p2]
     );
 
@@ -44,10 +44,17 @@ async function validateSwapData(connection, userIds, productIds) {
         return { isValid: false, errors };
     }
 
+    // 5. Controllo se uno dei prodotti è già stato scambiato ('swapped')
+    const swappedProduct = products.find(p => p.status === 'swapped');
+    if (swappedProduct) {
+        errors.push(`Il prodotto "${swappedProduct.name || swappedProduct.id}" non è più disponibile per lo swap.`);
+        return { isValid: false, errors };
+    }
+
     const prod1 = products.find(p => p.id === p1);
     const prod2 = products.find(p => p.id === p2);
 
-    // 5. Verifica la coerenza proprietario-prodotto (User 1 possiede Prod 1 e User 2 possiede Prod 2, oppure viceversa)
+    // 6. Verifica la coerenza proprietario-prodotto
     const validOwnership = 
         (prod1.user_id === u1 && prod2.user_id === u2) ||
         (prod1.user_id === u2 && prod2.user_id === u1);
@@ -84,7 +91,7 @@ router.get('/', async (req, res) => {
             `, [swap.id]);
 
             const [products] = await pool.execute(`
-                SELECT p.id, p.name, p.price 
+                SELECT p.id, p.name, p.price, p.status 
                 FROM products p
                 JOIN swap_order_products sop ON p.id = sop.product_id
                 WHERE sop.order_id = ?
@@ -103,15 +110,16 @@ router.get('/', async (req, res) => {
     }
 });
 
-// POST /api/swaps - Creazione ordine swap
+// POST /api/swaps - Creazione ordine swap e aggiornamento prodotti a 'swapped'
 router.post('/', async (req, res) => {
     const connection = await pool.getConnection();
     try {
         const { user_ids, product_ids } = req.body;
 
-        // Validazione stringente
+        // Validazione stringente (incluso controllo status = 'swapped')
         const { isValid, errors, cleanUserIds, cleanProductIds } = await validateSwapData(connection, user_ids, product_ids);
         if (!isValid) {
+            connection.release();
             return res.status(400).json({ error: errors.join(' ') });
         }
 
@@ -127,6 +135,9 @@ router.post('/', async (req, res) => {
         for (const productId of cleanProductIds) {
             await connection.execute('INSERT INTO swap_order_products (order_id, product_id) VALUES (?, ?)', [orderId, productId]);
         }
+
+        // AGGIORNAMENTO STATO PRODOTTI A 'swapped'
+        await connection.execute('UPDATE products SET status = "swapped" WHERE id IN (?, ?)', cleanProductIds);
 
         await connection.commit();
         res.status(201).json({ id: orderId, user_ids: cleanUserIds, product_ids: cleanProductIds });
@@ -154,7 +165,6 @@ router.put('/:id', async (req, res) => {
             return res.status(404).json({ error: 'Ordine swap non trovato' });
         }
 
-        // 2. Se vengono passati entrambi, esegui la validazione incrociata
         if (user_ids && product_ids) {
             const { isValid, errors, cleanUserIds, cleanProductIds } = await validateSwapData(connection, user_ids, product_ids);
             if (!isValid) {
@@ -171,29 +181,6 @@ router.put('/:id', async (req, res) => {
             for (const productId of cleanProductIds) {
                 await connection.execute('INSERT INTO swap_order_products (order_id, product_id) VALUES (?, ?)', [id, productId]);
             }
-        } else {
-            // Controlli di sicurezza parziali se inviati separatamente
-            if (user_ids && Array.isArray(user_ids)) {
-                if (user_ids.length !== 2 || user_ids[0] === user_ids[1]) {
-                    await connection.rollback();
-                    return res.status(400).json({ error: 'Devi selezionare 2 utenti distinti.' });
-                }
-                await connection.execute('DELETE FROM swap_order_users WHERE order_id = ?', [id]);
-                for (const userId of user_ids) {
-                    await connection.execute('INSERT INTO swap_order_users (order_id, user_id) VALUES (?, ?)', [id, userId]);
-                }
-            }
-
-            if (product_ids && Array.isArray(product_ids)) {
-                if (product_ids.length !== 2 || product_ids[0] === product_ids[1]) {
-                    await connection.rollback();
-                    return res.status(400).json({ error: 'Devi selezionare 2 prodotti distinti.' });
-                }
-                await connection.execute('DELETE FROM swap_order_products WHERE order_id = ?', [id]);
-                for (const productId of product_ids) {
-                    await connection.execute('INSERT INTO swap_order_products (order_id, product_id) VALUES (?, ?)', [id, productId]);
-                }
-            }
         }
 
         await connection.commit();
@@ -206,7 +193,7 @@ router.put('/:id', async (req, res) => {
     }
 });
 
-// DELETE /api/swaps/:id - Eliminazione ordine swap e relative relazioni
+// DELETE /api/swaps/:id - Eliminazione ordine swap e ripristino stato prodotti a 'available'
 router.delete('/:id', async (req, res) => {
     const connection = await pool.getConnection();
     try {
@@ -219,9 +206,18 @@ router.delete('/:id', async (req, res) => {
             return res.status(404).json({ error: 'Ordine swap non trovato' });
         }
 
+        // Recupera i prodotti legati all'ordine per ripristinarne lo stato
+        const [products] = await connection.execute('SELECT product_id FROM swap_order_products WHERE order_id = ?', [id]);
+        const productIds = products.map(p => p.product_id);
+
         await connection.execute('DELETE FROM swap_order_users WHERE order_id = ?', [id]);
         await connection.execute('DELETE FROM swap_order_products WHERE order_id = ?', [id]);
         await connection.execute('DELETE FROM swap_orders WHERE id = ?', [id]);
+
+        // RIPRISTINO STATO PRODOTTI A 'available'
+        if (productIds.length > 0) {
+            await connection.execute(`UPDATE products SET status = "available" WHERE id IN (${productIds.map(() => '?').join(',')})`, productIds);
+        }
 
         await connection.commit();
         res.json({ message: `Ordine swap #${id} eliminato con successo`, id: Number(id) });

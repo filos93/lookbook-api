@@ -7,7 +7,7 @@ function validateAndSanitizeProduct(data, isUpdate = false) {
     const errors = [];
     const cleanData = {};
 
-    // 1. Gestione NOME PRODOTTO
+    // 1. NOME PRODOTTO
     if (data.name !== undefined) {
         const trimmedName = data.name.trim();
         if (!trimmedName) {
@@ -20,20 +20,19 @@ function validateAndSanitizeProduct(data, isUpdate = false) {
         errors.push('Il campo name è obbligatorio.');
     }
 
-    // 2. Gestione PREZZO
+    // 2. PREZZO
     if (data.price !== undefined) {
         const numericPrice = parseFloat(data.price);
         if (isNaN(numericPrice) || numericPrice < 0) {
             errors.push('Il prezzo deve essere un numero valido maggiore o uguale a 0.');
         } else {
-            // Arrotonda a due cifre decimali
             cleanData.price = Math.round(numericPrice * 100) / 100;
         }
     } else if (!isUpdate) {
         cleanData.price = 0.00;
     }
 
-    // 3. Gestione USER_ID
+    // 3. USER_ID
     if (data.user_id !== undefined) {
         const userId = parseInt(data.user_id, 10);
         if (isNaN(userId) || userId <= 0) {
@@ -45,10 +44,21 @@ function validateAndSanitizeProduct(data, isUpdate = false) {
         errors.push('Il campo user_id è obbligatorio.');
     }
 
-    // 4. Gestione ARRAY FOTO
+    // 4. STATUS ('available' o 'swapped')
+    if (data.status !== undefined) {
+        const validStatuses = ['available', 'swapped'];
+        if (!validStatuses.includes(data.status)) {
+            errors.push('Lo status deve essere "available" o "swapped".');
+        } else {
+            cleanData.status = data.status;
+        }
+    } else if (!isUpdate) {
+        cleanData.status = 'available'; // Default per i nuovi prodotti
+    }
+
+    // 5. ARRAY FOTO
     if (data.photos !== undefined) {
         if (Array.isArray(data.photos)) {
-            // Pulisce gli URL ed elimina eventuali valori vuoti o non stringhe
             cleanData.photos = data.photos
                 .filter(url => typeof url === 'string')
                 .map(url => url.trim())
@@ -65,11 +75,11 @@ function validateAndSanitizeProduct(data, isUpdate = false) {
     };
 }
 
-// GET /api/products - Elenco prodotti con proprietario e foto
+// GET /api/products - Elenco prodotti con proprietario, foto e status
 router.get('/', async (req, res) => {
     try {
         const [rows] = await pool.execute(`
-            SELECT p.id, p.name, p.price, p.user_id, u.name AS owner_name, u.email AS owner_email,
+            SELECT p.id, p.name, p.price, p.status, p.user_id, u.name AS owner_name, u.email AS owner_email,
                    GROUP_CONCAT(pp.photo_url) AS photos
             FROM products p
             LEFT JOIN users u ON p.user_id = u.id
@@ -80,6 +90,7 @@ router.get('/', async (req, res) => {
 
         const products = rows.map(p => ({
             ...p,
+            status: p.status || 'available',
             photos: p.photos ? p.photos.split(',') : []
         }));
 
@@ -91,7 +102,6 @@ router.get('/', async (req, res) => {
 
 // POST /api/products - Creazione prodotto
 router.post('/', async (req, res) => {
-    // 1. Validazione input
     const { isValid, errors, cleanData } = validateAndSanitizeProduct(req.body, false);
     if (!isValid) {
         return res.status(400).json({ error: errors.join(' ') });
@@ -99,23 +109,22 @@ router.post('/', async (req, res) => {
 
     const connection = await pool.getConnection();
     try {
-        const { user_id, name, price, photos = [] } = cleanData;
+        const { user_id, name, price, status, photos = [] } = cleanData;
 
-        // 2. Verifica che l'utente esista prima di collegare il prodotto
         const [users] = await connection.execute('SELECT id FROM users WHERE id = ?', [user_id]);
         if (users.length === 0) {
+            connection.release();
             return res.status(404).json({ error: 'L\'utente specificato (user_id) non esiste.' });
         }
 
         await connection.beginTransaction();
 
         const [productResult] = await connection.execute(
-            'INSERT INTO products (user_id, name, price) VALUES (?, ?, ?)',
-            [user_id, name, price]
+            'INSERT INTO products (user_id, name, price, status) VALUES (?, ?, ?, ?)',
+            [user_id, name, price, status]
         );
         const productId = productResult.insertId;
 
-        // Inserimento foto
         for (const photoUrl of photos) {
             await connection.execute(
                 'INSERT INTO product_photos (product_id, photo_url) VALUES (?, ?)',
@@ -124,7 +133,7 @@ router.post('/', async (req, res) => {
         }
 
         await connection.commit();
-        res.status(201).json({ id: productId, user_id, name, price, photos });
+        res.status(201).json({ id: productId, user_id, name, price, status, photos });
     } catch (error) {
         await connection.rollback();
         res.status(500).json({ error: 'Errore inserimento prodotto', details: error.message });
@@ -133,11 +142,10 @@ router.post('/', async (req, res) => {
     }
 });
 
-// PUT /api/products/:id - Modifica prodotto (supporta aggiornamenti parziali)
+// PUT /api/products/:id - Modifica prodotto (incluso status)
 router.put('/:id', async (req, res) => {
     const { id } = req.params;
     
-    // 1. Validazione input
     const { isValid, errors, cleanData } = validateAndSanitizeProduct(req.body, true);
     if (!isValid) {
         return res.status(400).json({ error: errors.join(' ') });
@@ -147,7 +155,6 @@ router.put('/:id', async (req, res) => {
     try {
         await connection.beginTransaction();
 
-        // 2. Verifica che il prodotto esista
         const [products] = await connection.execute('SELECT * FROM products WHERE id = ?', [id]);
         if (products.length === 0) {
             await connection.rollback();
@@ -156,7 +163,6 @@ router.put('/:id', async (req, res) => {
 
         const currentProduct = products[0];
 
-        // 3. Se user_id viene modificato, verifica che il nuovo utente esista
         if (cleanData.user_id !== undefined && cleanData.user_id !== currentProduct.user_id) {
             const [users] = await connection.execute('SELECT id FROM users WHERE id = ?', [cleanData.user_id]);
             if (users.length === 0) {
@@ -165,18 +171,16 @@ router.put('/:id', async (req, res) => {
             }
         }
 
-        // 4. Prepara i nuovi valori (mantiene i precedenti se omessi)
         const updatedUserId = cleanData.user_id !== undefined ? cleanData.user_id : currentProduct.user_id;
         const updatedName = cleanData.name !== undefined ? cleanData.name : currentProduct.name;
         const updatedPrice = cleanData.price !== undefined ? cleanData.price : currentProduct.price;
+        const updatedStatus = cleanData.status !== undefined ? cleanData.status : currentProduct.status;
 
-        // 5. Aggiorna la tabella principale
         await connection.execute(
-            'UPDATE products SET user_id = ?, name = ?, price = ? WHERE id = ?',
-            [updatedUserId, updatedName, updatedPrice, id]
+            'UPDATE products SET user_id = ?, name = ?, price = ?, status = ? WHERE id = ?',
+            [updatedUserId, updatedName, updatedPrice, updatedStatus, id]
         );
 
-        // 6. Aggiorna le foto solo se passate esplicitamente nel body
         let finalPhotos = [];
         if (cleanData.photos !== undefined) {
             await connection.execute('DELETE FROM product_photos WHERE product_id = ?', [id]);
@@ -188,7 +192,6 @@ router.put('/:id', async (req, res) => {
             }
             finalPhotos = cleanData.photos;
         } else {
-            // Recupera le foto esistenti per la risposta JSON
             const [existingPhotos] = await connection.execute('SELECT photo_url FROM product_photos WHERE product_id = ?', [id]);
             finalPhotos = existingPhotos.map(row => row.photo_url);
         }
@@ -201,6 +204,7 @@ router.put('/:id', async (req, res) => {
             user_id: updatedUserId,
             name: updatedName,
             price: updatedPrice,
+            status: updatedStatus,
             photos: finalPhotos
         });
     } catch (error) {
@@ -219,10 +223,18 @@ router.delete('/:id', async (req, res) => {
     try {
         await connection.beginTransaction();
 
-        const [products] = await connection.execute('SELECT id FROM products WHERE id = ?', [id]);
+        const [products] = await connection.execute('SELECT id, status FROM products WHERE id = ?', [id]);
         if (products.length === 0) {
             await connection.rollback();
             return res.status(404).json({ error: 'Prodotto non trovato' });
+        }
+
+        // Blocco sicurezza: impedisce di eliminare un prodotto attualmente coinvolto in uno swap
+        if (products[0].status === 'swapped') {
+            await connection.rollback();
+            return res.status(400).json({ 
+                error: 'Non puoi eliminare un prodotto che risulta attualmente scambiato. Elimina prima l\'ordine di swap.' 
+            });
         }
 
         await connection.execute('DELETE FROM product_photos WHERE product_id = ?', [id]);
