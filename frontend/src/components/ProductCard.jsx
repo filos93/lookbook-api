@@ -1,9 +1,11 @@
 export default function ProductCard({ product, onDelete, onEdit, onSwapClick }) {
   if (!product) return null;
 
-  const { id, name, price, owner_name, photos } = product;
+  const { id, name, price, owner_name, photos, status = 'available' } = product;
 
-  // Parsing sicuro per photos (sia se arriva come array, sia come stringa JSON da MySQL)
+  const isSwapped = status === 'swapped';
+
+  // Parsing sicuro per photos
   let photoList = [];
   if (Array.isArray(photos)) {
     photoList = photos;
@@ -20,7 +22,9 @@ export default function ProductCard({ product, onDelete, onEdit, onSwapClick }) 
     : 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?auto=format&fit=crop&q=80&w=600';
 
   return (
-    <div className="bg-[#121624] border border-[#1f263e] rounded-xl overflow-hidden shadow-lg flex flex-col justify-between group hover:border-[#374151] transition relative">
+    <div className={`bg-[#121624] border border-[#1f263e] rounded-xl overflow-hidden shadow-lg flex flex-col justify-between group transition relative ${
+      isSwapped ? 'opacity-70 border-gray-800' : 'hover:border-[#374151]'
+    }`}>
       <div>
         {/* Container Immagine */}
         <div className="relative h-64 w-full bg-[#0b0e17] overflow-hidden">
@@ -32,8 +36,9 @@ export default function ProductCard({ product, onDelete, onEdit, onSwapClick }) 
                   e.stopPropagation();
                   if (confirm(`Eliminare il capo "${name}"?`)) onDelete(id);
                 }}
-                className="bg-red-600/80 hover:bg-red-600 text-white text-xs font-bold w-7 h-7 rounded-full flex items-center justify-center backdrop-blur-md transition"
-                title="Elimina prodotto"
+                disabled={isSwapped}
+                className="bg-red-600/80 hover:bg-red-600 text-white text-xs font-bold w-7 h-7 rounded-full flex items-center justify-center backdrop-blur-md transition disabled:opacity-40 disabled:cursor-not-allowed"
+                title={isSwapped ? "Impossibile eliminare un capo scambiato" : "Elimina prodotto"}
               >
                 ✕
               </button>
@@ -53,15 +58,18 @@ export default function ProductCard({ product, onDelete, onEdit, onSwapClick }) 
             )}
           </div>
 
+          {/* Prezzo in alto a destra */}
           <span className="absolute top-3 right-3 bg-[#6366f1] text-white text-xs font-bold px-2.5 py-1 rounded-md z-10 shadow-md">
             €{Number(price || 0).toFixed(2)}
           </span>
+
           <img
             src={coverImage}
             alt={name || 'Capo LookBook'}
-            className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+            className={`w-full h-full object-cover transition duration-300 ${
+              isSwapped ? 'filter grayscale-[30%]' : 'group-hover:scale-105'
+            }`}
             onError={(e) => {
-              // Fallback automatico se l'URL dell'immagine è rotto/non raggiungibile
               e.target.src = 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?auto=format&fit=crop&q=80&w=600';
             }}
           />
@@ -77,17 +85,30 @@ export default function ProductCard({ product, onDelete, onEdit, onSwapClick }) 
         </div>
       </div>
 
+      {/* Footer Card: Badge Stato & Pulsante Azione */}
       <div className="p-4 pt-0 flex justify-between items-center mt-2">
-        <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
-          DISPONIBILE
+        {/* Badge Stato Dinamico */}
+        <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${
+          isSwapped 
+            ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30' 
+            : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+        }`}>
+          {isSwapped ? 'SCAMBIATO' : 'DISPONIBILE'}
         </span>
+
+        {/* Pulsante Scambia */}
         {onSwapClick && (
           <button
-            onClick={() => onSwapClick(product)}
-            className="bg-[#1b2238] hover:bg-[#252f4c] text-[#818cf8] text-xs font-semibold px-3 py-1.5 rounded-md border border-[#2d3758] transition flex items-center space-x-1"
+            onClick={() => !isSwapped && onSwapClick(product)}
+            disabled={isSwapped}
+            className={`text-xs font-semibold px-3 py-1.5 rounded-md border transition flex items-center space-x-1 ${
+              isSwapped
+                ? 'bg-gray-800/50 text-gray-500 border-gray-700/50 cursor-not-allowed'
+                : 'bg-[#1b2238] hover:bg-[#252f4c] text-[#818cf8] border-[#2d3758]'
+            }`}
           >
             <span>⇄</span>
-            <span>Scambia</span>
+            <span>{isSwapped ? 'Non disponibile' : 'Scambia'}</span>
           </button>
         )}
       </div>

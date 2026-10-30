@@ -58,7 +58,7 @@ export default function SwapCard({ swap, onDelete }) {
           {onDelete && (
             <button
               onClick={() => {
-                if (confirm(`Sei sicuro di voler cancellare l'ordine Swap #${swap.id}?`)) {
+                if (confirm(`Sei sicuro di voler cancellare l'ordine Swap #${swap.id}? I prodotti riavranno lo stato 'Disponibile'.`)) {
                   onDelete(swap.id);
                 }
               }}
@@ -112,8 +112,13 @@ export default function SwapCard({ swap, onDelete }) {
                   key={p.id || idx}
                   className="flex justify-between items-center bg-[#121624] p-2 rounded-lg border border-[#1f263e]/60"
                 >
-                  <span className="capitalize font-medium text-white">{p.name}</span>
-                  <span className="font-bold text-emerald-400">
+                  <div className="flex items-center space-x-2 truncate">
+                    <span className="capitalize font-medium text-white truncate">{p.name}</span>
+                    <span className="bg-amber-500/10 text-amber-400 text-[9px] font-bold px-1.5 py-0.5 rounded border border-amber-500/20">
+                      Scambiato
+                    </span>
+                  </div>
+                  <span className="font-bold text-emerald-400 shrink-0 ml-2">
                     €{Number(p.price || 0).toFixed(2)}
                   </span>
                 </li>
