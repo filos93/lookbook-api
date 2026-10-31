@@ -57,11 +57,7 @@ export default function SwapCard({ swap, onDelete }) {
 
           {onDelete && (
             <button
-              onClick={() => {
-                if (confirm(`Sei sicuro di voler cancellare l'ordine Swap #${swap.id}? I prodotti riavranno lo stato 'Disponibile'.`)) {
-                  onDelete(swap.id);
-                }
-              }}
+              onClick={() => onDelete(swap.id)}
               className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg text-xs font-semibold transition active:scale-95"
             >
               Cancella

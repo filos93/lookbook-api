@@ -37,6 +37,15 @@ export default function App() {
   const [editingUser, setEditingUser] = useState(null);
   const [editingProduct, setEditingProduct] = useState(null);
 
+  // Custom Confirmation Modal State
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    confirmText: 'Elimina',
+    onConfirm: null
+  });
+
   const loadAllData = async () => {
     try {
       const [pData, sData, uData] = await Promise.all([
@@ -58,7 +67,11 @@ export default function App() {
     loadAllData();
   }, []);
 
-  // Creazione Swap integrata con client.js (eccezione propagata al banner di SwapRecord)
+  const closeConfirmModal = () => {
+    setConfirmModal({ isOpen: false, title: '', message: '', confirmText: 'Elimina', onConfirm: null });
+  };
+
+  // Creazione Swap
   const handleCreateSwap = async (swapPayload) => {
     await createSwap(swapPayload);
     await loadAllData();
@@ -66,50 +79,66 @@ export default function App() {
     setActiveTab('swaps');
   };
 
-  // Delete Swap con aggiornamento dello stato dei prodotti coinvolti
-  const handleDeleteSwap = async (swapId) => {
-    try {
-      // Chiamata API al backend
-      await deleteSwap(swapId);
-
-      // 1. Rimuovi lo swap eliminato dallo stato locale
-      setSwaps((prevSwaps) => prevSwaps.filter((s) => s.id !== swapId));
-
-      // 2. Ricarica la lista prodotti per aggiornare lo status da 'swapped' ad 'available'
-      const updatedProducts = await fetchProducts();
-      setProducts(updatedProducts);
-
-    } catch (err) {
-      alert(`Impossibile eliminare lo swap: ${err.message}`);
-    }
+  // Delete Swap con conferma personalizzata
+  const promptDeleteSwap = (swapId) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Elimina Ordine Swap',
+      message: 'Sei sicuro di voler eliminare questo ordine di swap? I capi coinvolti torneranno disponibili.',
+      confirmText: 'Annulla Swap',
+      onConfirm: async () => {
+        try {
+          await deleteSwap(swapId);
+          setSwaps((prevSwaps) => prevSwaps.filter((s) => s.id !== swapId));
+          const updatedProducts = await fetchProducts();
+          setProducts(updatedProducts);
+        } catch (err) {
+          console.error('Errore eliminazione swap:', err.message);
+        } finally {
+          closeConfirmModal();
+        }
+      }
+    });
   };
 
-
-  const handleDeleteProduct = async (id) => {
-    try {
-      await deleteProduct(id);
-      await loadAllData();
-    } catch (err) {
-      console.error('Errore eliminazione prodotto:', err.message);
-    }
+  // Delete Product con conferma personalizzata
+  const promptDeleteProduct = (product) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Elimina Capo',
+      message: `Sei sicuro di voler eliminare il capo "${product.name}"? L'azione non può essere annullata.`,
+      confirmText: 'Elimina Capo',
+      onConfirm: async () => {
+        try {
+          await deleteProduct(product.id);
+          await loadAllData();
+        } catch (err) {
+          console.error('Errore eliminazione prodotto:', err.message);
+        } finally {
+          closeConfirmModal();
+        }
+      }
+    });
   };
 
-  const handleDeleteUser = async (user) => {
-    const confirmed = window.confirm(
-      `Sei sicuro di voler eliminare l'utente "${user.name} ${user.surname}"?\n\n` +
-      `⚠️ ATTENZIONE: Tutti i suoi capi e gli ordini di swap a cui ha partecipato verranno eliminati. ` +
-      `Il conteggio e il valore totale scambiato verranno ricalcolati.`
-    );
-
-    if (!confirmed) return;
-
-    try {
-      await deleteUser(user.id);
-      // Ricarica la lista utenti, prodotti e swap per aggiornare i totali
-      await refreshAllData();
-    } catch (err) {
-      alert(`Errore eliminazione utente: ${err.message}`);
-    }
+  // Delete User con conferma personalizzata
+  const promptDeleteUser = (user) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Elimina Utente',
+      message: `Sei sicuro di voler eliminare l'utente "${user.name} ${user.surname}"? Tutti i suoi capi e gli ordini di swap associati verranno rimossi.`,
+      confirmText: 'Elimina Utente',
+      onConfirm: async () => {
+        try {
+          await deleteUser(user.id);
+          await loadAllData();
+        } catch (err) {
+          console.error('Errore eliminazione utente:', err.message);
+        } finally {
+          closeConfirmModal();
+        }
+      }
+    });
   };
 
   const handleUpdateUser = async (userId, updatedData) => {
@@ -124,12 +153,10 @@ export default function App() {
     setEditingProduct(null);
   };
 
-  // Calcolo dinamico del valore totale usando il valore lordo
   const totalSwappedValue = swaps.reduce((acc, swap) => {
     return acc + Number(swap.total_gross_value || 0);
   }, 0);
 
-  // Filtraggio con sanitizzazione e ricerca flessibile (nome capo, proprietario, email o prezzo)
   const filteredProducts = (products || []).filter((p) => {
     const cleanQuery = searchQuery.trim().toLowerCase().replace(/\s+/g, ' ');
     if (!cleanQuery) return true;
@@ -236,7 +263,7 @@ export default function App() {
               <ProductCard
                 key={p.id}
                 product={p}
-                onDelete={handleDeleteProduct}
+                onDelete={() => promptDeleteProduct(p)}
                 onEdit={(productToEdit) => setEditingProduct(productToEdit)}
                 onSwapClick={() => {
                   setShowSwapBuilder(true);
@@ -254,7 +281,7 @@ export default function App() {
               <p className="text-gray-500 italic">Nessun ordine swap registrato.</p>
             ) : (
               swaps.map((s) => (
-                <SwapCard key={s.id} swap={s} onDelete={handleDeleteSwap} />
+                <SwapCard key={s.id} swap={s} onDelete={() => promptDeleteSwap(s.id)} />
               ))
             )}
           </div>
@@ -283,7 +310,7 @@ export default function App() {
                     ✏️
                   </button>
                   <button
-                    onClick={() => handleDeleteUser(u.id)}
+                    onClick={() => promptDeleteUser(u)}
                     className="text-red-400 hover:text-red-300 hover:bg-red-950/40 p-2 rounded-lg text-sm font-bold transition"
                     title="Elimina Utente"
                   >
@@ -296,7 +323,7 @@ export default function App() {
         )}
       </main>
 
-      {/* Modals for Creation */}
+      {/* Modals per Creazione */}
       <UserRegisterModal
         isOpen={isUserModalOpen}
         onClose={() => setIsUserModalOpen(false)}
@@ -310,7 +337,7 @@ export default function App() {
         onProductCreated={() => loadAllData()}
       />
 
-      {/* Modals for Editing */}
+      {/* Modals per Modifica */}
       {editingUser && (
         <EditUserModal
           user={editingUser}
@@ -326,6 +353,31 @@ export default function App() {
           onClose={() => setEditingProduct(null)}
           onSave={handleUpdateProduct}
         />
+      )}
+
+      {/* Modal Personalizzato di Conferma Eliminazione */}
+      {confirmModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-2xl bg-[#121624] border border-[#1f263e] p-6 shadow-2xl text-gray-200 animate-in fade-in zoom-in-95 duration-150">
+            <h3 className="text-lg font-bold text-white mb-2">{confirmModal.title}</h3>
+            <p className="text-sm text-gray-400 mb-6 leading-relaxed">{confirmModal.message}</p>
+
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={closeConfirmModal}
+                className="px-4 py-2 text-sm font-semibold rounded-lg bg-[#1b2238] text-gray-300 hover:bg-[#252f4e] transition"
+              >
+                Annulla
+              </button>
+              <button
+                onClick={confirmModal.onConfirm}
+                className="px-4 py-2 text-sm font-semibold rounded-lg bg-red-600 text-white hover:bg-red-500 shadow-lg shadow-red-600/30 transition"
+              >
+                {confirmModal.confirmText}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

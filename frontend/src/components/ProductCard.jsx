@@ -34,7 +34,7 @@ export default function ProductCard({ product, onDelete, onEdit, onSwapClick }) 
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  if (confirm(`Eliminare il capo "${name}"?`)) onDelete(id);
+                  onDelete(product); // ✅ Chiama direttamente il gestore senza window.confirm
                 }}
                 disabled={isSwapped}
                 className="bg-red-600/80 hover:bg-red-600 text-white text-xs font-bold w-7 h-7 rounded-full flex items-center justify-center backdrop-blur-md transition disabled:opacity-40 disabled:cursor-not-allowed"
