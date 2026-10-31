@@ -2,12 +2,13 @@ const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
 const fs = require('fs');
+// Verifica che il percorso di db.js sia corretto (es. './db' se nella stessa cartella, o '../config/db' se in config)
 const pool = require('./db');
 
-async function runSqlFile(filePath) {
+async function runSqlFile(connection, filePath) {
   const sqlContent = fs.readFileSync(filePath, 'utf8');
 
-  // Pulizia commenti SQL (singola riga e blocchi)
+  // Pulizia commenti SQL (singola riga -- e blocchi /* */)
   const cleanSql = sqlContent
     .replace(/--.*$/gm, '')
     .replace(/\/\*[\s\S]*?\*\//g, '');
@@ -19,43 +20,52 @@ async function runSqlFile(filePath) {
     .filter((query) => query.length > 0);
 
   for (const query of queries) {
-    await pool.query(query);
+    await connection.query(query);
   }
 }
 
 async function initializeDatabase() {
-  const connection = await pool.getConnection();
+  let connection;
   try {
-    console.log(`📡 Connessione al database Aiven su ${process.env.DB_HOST}:${process.env.DB_PORT}...`);
+    const host = process.env.DB_HOST || 'localhost';
+    const port = process.env.DB_PORT || 3306;
+    const dbName = process.env.DB_NAME || 'defaultdb';
+    console.log(`📡 Connessione al database su ${host}:${port} [DB: ${dbName}]...`);
 
-    // Guardrail facoltativo: controlla se la tabella 'users' esiste già prima di sovrascrivere
+    connection = await pool.getConnection();
+
+    // Guardrail: controlla se la tabella 'users' esiste già in ambiente di produzione
     const [tables] = await connection.query(`
       SELECT TABLE_NAME 
       FROM information_schema.TABLES 
       WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'users'
-    `, [process.env.DB_NAME]);
+    `, [dbName]);
 
     if (tables.length > 0 && process.env.NODE_ENV === 'production') {
       console.warn('⚠️ Il database contiene già le tabelle. Inizializzazione saltata per proteggere i dati di produzione.');
-      process.exit(0);
+      return;
     }
 
     const schemaPath = path.join(__dirname, '..', 'db', 'schema.sql');
     const seedsPath = path.join(__dirname, '..', 'db', 'seeds.sql');
 
     console.log('📄 Esecuzione schema.sql...');
-    await runSqlFile(schemaPath);
+    await runSqlFile(connection, schemaPath);
 
     console.log('🌱 Esecuzione seeds.sql...');
-    await runSqlFile(seedsPath);
+    await runSqlFile(connection, seedsPath);
 
-    console.log('✅ Database Aiven inizializzato e popolato con successo!');
+    console.log('✅ Database inizializzato e popolato con successo!');
   } catch (error) {
-    console.error('❌ Errore durante l\'inizializzazione del database Aiven:', error.message);
-    process.exit(1);
+    console.error('❌ Errore durante l\'inizializzazione del database:', error.message);
+    process.exitCode = 1;
   } finally {
-    connection.release();
-    process.exit(0);
+    if (connection) {
+      connection.release();
+    }
+    // Chiude in modo pulito il pool di connessioni prima di terminare
+    await pool.end();
+    process.exit(process.exitCode || 0);
   }
 }
 
