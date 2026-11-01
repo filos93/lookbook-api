@@ -34,7 +34,7 @@ export default function ProductCard({ product, onDelete, onEdit, onSwapClick }) 
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  onDelete(product); // ✅ Chiama direttamente il gestore senza window.confirm
+                  onDelete(product);
                 }}
                 disabled={isSwapped}
                 className="bg-red-600/80 hover:bg-red-600 text-white text-xs font-bold w-7 h-7 rounded-full flex items-center justify-center backdrop-blur-md transition disabled:opacity-40 disabled:cursor-not-allowed"
@@ -57,7 +57,6 @@ export default function ProductCard({ product, onDelete, onEdit, onSwapClick }) 
                 ✏️
               </button>
             )}
-
           </div>
 
           {/* Prezzo in alto a destra */}
@@ -87,7 +86,7 @@ export default function ProductCard({ product, onDelete, onEdit, onSwapClick }) 
         </div>
       </div>
 
-      {/* Footer Card: Badge Stato & Pulsante Azione */}
+      {/* Footer Card: Badge Stato & Pulsante Scambia (solo se disponibile) */}
       <div className="p-4 pt-0 flex justify-between items-center mt-2">
         {/* Badge Stato Dinamico */}
         <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${
@@ -98,19 +97,14 @@ export default function ProductCard({ product, onDelete, onEdit, onSwapClick }) 
           {isSwapped ? 'SCAMBIATO' : 'DISPONIBILE'}
         </span>
 
-        {/* Pulsante Scambia */}
-        {onSwapClick && (
+        {/* Pulsante Scambia - mostrato solo se il capo è disponibile */}
+        {!isSwapped && onSwapClick && (
           <button
-            onClick={() => !isSwapped && onSwapClick(product)}
-            disabled={isSwapped}
-            className={`text-xs font-semibold px-3 py-1.5 rounded-md border transition flex items-center space-x-1 ${
-              isSwapped
-                ? 'bg-gray-800/50 text-gray-500 border-gray-700/50 cursor-not-allowed'
-                : 'bg-[#1b2238] hover:bg-[#252f4c] text-[#818cf8] border-[#2d3758]'
-            }`}
+            onClick={() => onSwapClick(product)}
+            className="text-xs font-semibold px-3 py-1.5 rounded-md border transition flex items-center space-x-1 bg-[#1b2238] hover:bg-[#252f4c] text-[#818cf8] border-[#2d3758] active:scale-95"
           >
             <span>⇄</span>
-            <span>{isSwapped ? 'Non disponibile' : 'Scambia'}</span>
+            <span>Scambia</span>
           </button>
         )}
       </div>

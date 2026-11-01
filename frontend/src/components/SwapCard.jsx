@@ -9,6 +9,9 @@ export default function SwapCard({ swap, onDelete, onEdit }) {
       })
     : 'Data non disponibile';
 
+  // Formattazione dell'ID come Codice di Riferimento univoco (es. #SWAP-0004)
+  const swapRef = `#SWAP-${String(swap.id).padStart(4, '0')}`;
+
   // Parsing e guardrail sicuri per gli array di partecipanti e prodotti
   const parseList = (data) => {
     if (Array.isArray(data)) return data;
@@ -35,7 +38,7 @@ export default function SwapCard({ swap, onDelete, onEdit }) {
           </div>
           <div>
             <div className="flex items-center space-x-2">
-              <span className="font-bold text-white text-base">Ordine Swap #{swap.id}</span>
+              <span className="font-bold text-white text-base">Ordine {swapRef}</span>
               <span className="bg-[#10b981]/20 text-[#10b981] text-[10px] font-bold px-2 py-0.5 rounded-full border border-[#10b981]/30">
                 Completato
               </span>

@@ -241,13 +241,14 @@ export default function App() {
       <Navbar
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
-        onOpenCreateUser={() => setIsUserModalOpen(true)}
+        activeTab={activeTab}
+        onOpenAddProduct={() => setIsProductModalOpen(true)}
         onOpenCreateSwap={() => {
           setActiveTab('catalog');
           setPreselectedProduct(null);
           setShowSwapBuilder(true);
         }}
-        onOpenAddProduct={() => setIsProductModalOpen(true)}
+        onOpenCreateUser={() => setIsUserModalOpen(true)}
       />
 
       <main className="max-w-7xl mx-auto px-6 py-8">
@@ -413,29 +414,33 @@ export default function App() {
 
         {/* Directory Utenti */}
         {activeTab === 'users' && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {users.map((u) => (
-              <div key={u.id} className="bg-[#121624] border border-[#1f263e] rounded-xl p-4 flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 rounded-full bg-[#1b2238] border border-[#2d3758] flex items-center justify-center font-bold text-indigo-400">
+              <div 
+                key={u.id} 
+                className="bg-[#121624] border border-[#1f263e] rounded-xl p-4 flex items-center justify-between gap-3 min-w-0 shadow-lg"
+              >
+                <div className="flex items-center space-x-3 min-w-0 flex-1">
+                  <div className="w-10 h-10 rounded-full bg-[#1b2238] border border-[#2d3758] flex items-center justify-center font-bold text-indigo-400 shrink-0">
                     {u.name?.charAt(0)}
                   </div>
-                  <div>
-                    <p className="text-white font-semibold text-sm">{u.name} {u.surname}</p>
-                    <p className="text-xs text-gray-400">{u.email}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-white font-semibold text-sm truncate">{u.name} {u.surname}</p>
+                    <p className="text-xs text-gray-400 truncate">{u.email}</p>
                   </div>
                 </div>
-                <div className="flex items-center space-x-1">
+
+                <div className="flex items-center space-x-1 shrink-0">
                   <button
                     onClick={() => setEditingUser(u)}
-                    className="text-gray-400 hover:text-indigo-400 hover:bg-indigo-950/40 p-2 rounded-lg text-sm font-bold transition"
+                    className="text-gray-400 hover:text-indigo-400 hover:bg-indigo-950/40 p-1.5 rounded-lg text-sm font-bold transition"
                     title="Modifica Utente"
                   >
                     ✏️
                   </button>
                   <button
                     onClick={() => promptDeleteUser(u)}
-                    className="text-red-400 hover:text-red-300 hover:bg-red-950/40 p-2 rounded-lg text-sm font-bold transition"
+                    className="text-red-400 hover:text-red-300 hover:bg-red-950/40 p-1.5 rounded-lg text-sm font-bold transition"
                     title="Elimina Utente"
                   >
                     ✕
