@@ -20,10 +20,10 @@ async function handleResponse(res, fallbackErrorMsg) {
 }
 
 // --- USERS ---
-export const fetchUsers = async () => {
+export async function fetchUsers() {
   const res = await fetch(`${API_BASE}/users`);
   return handleResponse(res, 'Errore nel caricamento degli utenti');
-};
+}
 
 export async function createUser(data) {
   const res = await fetch(`${API_BASE}/users`, {
@@ -32,11 +32,6 @@ export async function createUser(data) {
     body: JSON.stringify(data),
   });
   return handleResponse(res, "Errore durante la creazione dell'utente");
-}
-
-export async function deleteUser(id) {
-  const res = await fetch(`${API_BASE}/users/${id}`, { method: 'DELETE' });
-  return handleResponse(res, "Errore durante l'eliminazione dell'utente");
 }
 
 export async function updateUser(id, data) {
@@ -48,11 +43,16 @@ export async function updateUser(id, data) {
   return handleResponse(res, "Errore durante l'aggiornamento dell'utente");
 }
 
+export async function deleteUser(id) {
+  const res = await fetch(`${API_BASE}/users/${id}`, { method: 'DELETE' });
+  return handleResponse(res, "Errore durante l'eliminazione dell'utente");
+}
+
 // --- PRODUCTS ---
-export const fetchProducts = async () => {
+export async function fetchProducts() {
   const res = await fetch(`${API_BASE}/products`);
   return handleResponse(res, 'Errore nel caricamento dei prodotti');
-};
+}
 
 export async function createProduct(data) {
   const res = await fetch(`${API_BASE}/products`, {
@@ -61,11 +61,6 @@ export async function createProduct(data) {
     body: JSON.stringify(data),
   });
   return handleResponse(res, 'Errore durante la creazione del prodotto');
-}
-
-export async function deleteProduct(id) {
-  const res = await fetch(`${API_BASE}/products/${id}`, { method: 'DELETE' });
-  return handleResponse(res, "Errore durante l'eliminazione del prodotto");
 }
 
 export async function updateProduct(id, data) {
@@ -77,8 +72,13 @@ export async function updateProduct(id, data) {
   return handleResponse(res, "Errore durante l'aggiornamento del prodotto");
 }
 
+export async function deleteProduct(id) {
+  const res = await fetch(`${API_BASE}/products/${id}`, { method: 'DELETE' });
+  return handleResponse(res, "Errore durante l'eliminazione del prodotto");
+}
+
 // --- SWAPS ---
-export const fetchSwaps = async (filters = {}) => {
+export async function fetchSwaps(filters = {}) {
   const params = new URLSearchParams();
   if (filters.startDate) params.append('startDate', filters.startDate);
   if (filters.endDate) params.append('endDate', filters.endDate);
@@ -90,27 +90,27 @@ export const fetchSwaps = async (filters = {}) => {
 
   const res = await fetch(url);
   return handleResponse(res, 'Errore nel caricamento degli ordini swap');
-};
+}
 
-export const createSwap = async (data) => {
+export async function createSwap(data) {
   const res = await fetch(`${API_BASE}/swaps`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
   return handleResponse(res, 'Errore durante la creazione dello swap');
-};
+}
 
-export const deleteSwap = async (id) => {
-  const res = await fetch(`${API_BASE}/swaps/${id}`, { method: 'DELETE' });
-  return handleResponse(res, 'Errore nella cancellazione dello swap');
-};
-
-export const updateSwap = async (id, data) => {
+export async function updateSwap(id, data) {
   const res = await fetch(`${API_BASE}/swaps/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
   return handleResponse(res, "Errore durante l'aggiornamento dello swap");
-};
+}
+
+export async function deleteSwap(id) {
+  const res = await fetch(`${API_BASE}/swaps/${id}`, { method: 'DELETE' });
+  return handleResponse(res, 'Errore nella cancellazione dello swap');
+}

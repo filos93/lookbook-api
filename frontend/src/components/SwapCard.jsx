@@ -1,4 +1,4 @@
-export default function SwapCard({ swap, onDelete }) {
+export default function SwapCard({ swap, onDelete, onEdit }) {
   if (!swap) return null;
 
   const formattedDate = swap.created_at
@@ -45,8 +45,8 @@ export default function SwapCard({ swap, onDelete }) {
         </div>
 
         {/* Azioni & Valore Totale */}
-        <div className="flex items-center space-x-4">
-          <div className="text-right hidden sm:block">
+        <div className="flex items-center space-x-3">
+          <div className="text-right hidden sm:block mr-2">
             <p className="text-[10px] uppercase font-semibold text-gray-400 tracking-wider">
               Valore Scambiato
             </p>
@@ -54,6 +54,15 @@ export default function SwapCard({ swap, onDelete }) {
               €{Number(swap.total_gross_value || 0).toFixed(2)}
             </p>
           </div>
+
+          {onEdit && (
+            <button
+              onClick={() => onEdit(swap)}
+              className="px-3 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 rounded-lg text-xs font-semibold transition active:scale-95"
+            >
+              Modifica
+            </button>
+          )}
 
           {onDelete && (
             <button

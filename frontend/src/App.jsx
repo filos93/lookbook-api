@@ -8,6 +8,7 @@ import UserRegisterModal from './components/UserRegisterModal';
 import AddProductModal from './components/AddProductModal';
 import EditUserModal from './components/EditUserModal';
 import EditProductModal from './components/EditProductModal';
+import EditSwapModal from './components/EditSwapModal';
 import { 
   fetchProducts, 
   fetchSwaps, 
@@ -17,7 +18,8 @@ import {
   deleteProduct, 
   deleteUser,
   updateUser,
-  updateProduct
+  updateProduct,
+  updateSwap
 } from './api/client';
 
 export default function App() {
@@ -37,6 +39,7 @@ export default function App() {
   // Editing State
   const [editingUser, setEditingUser] = useState(null);
   const [editingProduct, setEditingProduct] = useState(null);
+  const [editingSwap, setEditingSwap] = useState(null);
 
   // Swap Filters State (Task 2)
   const [startDateFilter, setStartDateFilter] = useState('');
@@ -196,6 +199,12 @@ export default function App() {
     await updateProduct(productId, updatedData);
     await loadAllData();
     setEditingProduct(null);
+  };
+
+  const handleUpdateSwap = async (swapId, updatedData) => {
+    await updateSwap(swapId, updatedData);
+    await loadAllData();
+    setEditingSwap(null);
   };
 
   const totalSwappedValue = swaps.reduce((acc, swap) => {
@@ -390,7 +399,12 @@ export default function App() {
                 </p>
               ) : (
                 swaps.map((s) => (
-                  <SwapCard key={s.id} swap={s} onDelete={() => promptDeleteSwap(s.id)} />
+                  <SwapCard 
+                    key={s.id} 
+                    swap={s} 
+                    onDelete={() => promptDeleteSwap(s.id)} 
+                    onEdit={(swapToEdit) => setEditingSwap(swapToEdit)}
+                  />
                 ))
               )}
             </div>
@@ -462,6 +476,17 @@ export default function App() {
           users={users}
           onClose={() => setEditingProduct(null)}
           onSave={handleUpdateProduct}
+        />
+      )}
+
+      {editingSwap && (
+        <EditSwapModal
+          isOpen={!!editingSwap}
+          swap={editingSwap}
+          users={users}
+          products={products}
+          onClose={() => setEditingSwap(null)}
+          onSave={handleUpdateSwap}
         />
       )}
 
