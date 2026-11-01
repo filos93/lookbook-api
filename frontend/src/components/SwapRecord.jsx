@@ -1,9 +1,19 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
-export default function SwapRecord({ products = [], onCreateSwap }) {
+export default function SwapRecord({ products = [], preselectedProduct = null, onCreateSwap }) {
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [errorMessage, setErrorMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  // Pre-seleziona automaticamente il prodotto quando viene passato come prop da App.jsx
+  useEffect(() => {
+    if (preselectedProduct && preselectedProduct.status !== 'swapped') {
+      setSelectedProducts([preselectedProduct]);
+      setErrorMessage('');
+    } else if (!preselectedProduct) {
+      setSelectedProducts([]);
+    }
+  }, [preselectedProduct]);
 
   const toggleSelectProduct = (product) => {
     if (errorMessage) setErrorMessage('');
@@ -82,8 +92,12 @@ export default function SwapRecord({ products = [], onCreateSwap }) {
         <span className="text-emerald-400 text-xl">⇄</span>
         <h2 className="text-xl font-bold text-white">Crea Nuovo Scambio (Swap)</h2>
       </div>
+
+      {/* Descrizione dinamica in base alla selezione */}
       <p className="text-xs text-gray-400 mb-4">
-        Seleziona 2 capi disponibili da due proprietari differenti per completare una proposta di scambio.
+        {selectedProducts.length === 1
+          ? 'Seleziona il secondo capo da un proprietario differente per completare la proposta di scambio.'
+          : 'Seleziona 2 capi disponibili da due proprietari differenti per completare una proposta di scambio.'}
       </p>
 
       {/* Banner Errore In-line */}

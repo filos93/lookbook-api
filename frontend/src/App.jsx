@@ -32,6 +32,7 @@ export default function App() {
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [showSwapBuilder, setShowSwapBuilder] = useState(false);
+  const [preselectedProduct, setPreselectedProduct] = useState(null);
 
   // Editing State
   const [editingUser, setEditingUser] = useState(null);
@@ -76,7 +77,15 @@ export default function App() {
     await createSwap(swapPayload);
     await loadAllData();
     setShowSwapBuilder(false);
+    setPreselectedProduct(null);
     setActiveTab('swaps');
+  };
+
+  // Pre-selezione del prodotto cliccato dalla ProductCard
+  const handleStartSwapWithProduct = (product) => {
+    setPreselectedProduct(product);
+    setShowSwapBuilder(true);
+    window.scrollTo({ top: 250, behavior: 'smooth' });
   };
 
   // Delete Swap con conferma personalizzata
@@ -190,6 +199,7 @@ export default function App() {
         onOpenCreateUser={() => setIsUserModalOpen(true)}
         onOpenCreateSwap={() => {
           setActiveTab('catalog');
+          setPreselectedProduct(null);
           setShowSwapBuilder(true);
         }}
         onOpenAddProduct={() => setIsProductModalOpen(true)}
@@ -206,12 +216,19 @@ export default function App() {
         {showSwapBuilder && (
           <div className="mb-8 bg-[#121624] border border-[#6366f1] rounded-xl p-6 relative shadow-2xl">
             <button
-              onClick={() => setShowSwapBuilder(false)}
+              onClick={() => {
+                setShowSwapBuilder(false);
+                setPreselectedProduct(null);
+              }}
               className="absolute top-4 right-4 text-gray-400 hover:text-white font-bold transition"
             >
               ✕
             </button>
-            <SwapRecord products={products} onCreateSwap={handleCreateSwap} />
+            <SwapRecord 
+              products={products} 
+              preselectedProduct={preselectedProduct}
+              onCreateSwap={handleCreateSwap} 
+            />
           </div>
         )}
 
@@ -265,10 +282,7 @@ export default function App() {
                 product={p}
                 onDelete={() => promptDeleteProduct(p)}
                 onEdit={(productToEdit) => setEditingProduct(productToEdit)}
-                onSwapClick={() => {
-                  setShowSwapBuilder(true);
-                  window.scrollTo({ top: 250, behavior: 'smooth' });
-                }}
+                onSwapClick={(product) => handleStartSwapWithProduct(product)}
               />
             ))}
           </div>

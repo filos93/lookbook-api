@@ -1,46 +1,35 @@
 # 📋 TODO List - Swap Studio Milestones
 
-## 1. 🎯 UX Fix: Pre-selezione Prodotto nello Swap
-- [ ] **`App.jsx`**
-  - [ ] Aggiungere lo stato `preselectedProduct`
-  - [ ] Implementare `handleStartSwapWithProduct(product)` per impostare il capo e aprire lo Swap Builder
-  - [ ] Passare `preselectedProduct` come prop a `<SwapRecord />`
-- [ ] **`SwapRecord.jsx`**
-  - [ ] Aggiungere `useEffect` in ascolto su `preselectedProduct`
-  - [ ] Popolare automaticamente `selectedProduct1` e l'utente proprietario (`selectedUser1`) all'apertura
-
----
-
-## 2. 🔍 Filtraggio Ordini Swap (Data e Prodotti)
+## 2. 🔍 Swap Orders Filtering (Date and Products)
 - [ ] **Backend (`server.js` / `routes/swaps.js`)**
-  - [ ] Estendere `GET /api/swaps` per accettare i parametri query `startDate`, `endDate`, e `productId`
-  - [ ] Costruire la query dinamica MySQL usando **Prepared Statements** (`?`)
+  - [ ] Extend `GET /api/swaps` to accept query parameters `startDate`, `endDate`, and `productId`
+  - [ ] Build the dynamic MySQL query using **Prepared Statements** (`?`)
 - [ ] **Client API (`src/api/client.js`)**
-  - [ ] Aggiornare `fetchSwaps(filters)` per convertire i filtri in `URLSearchParams`
+  - [ ] Update `fetchSwaps(filters)` to convert filters into `URLSearchParams`
 - [ ] **Frontend (`App.jsx`)**
-  - [ ] Aggiungere gli stati locale per i filtri (`filterStartDate`, `filterEndDate`, `filterProductId`)
-  - [ ] Creare la barra di filtraggio (Date Pickers e Dropdown dei capi) nella tab *Active Swaps*
-  - [ ] Richiamare `loadSwaps()` al cambio dei filtri
+  - [ ] Add local state for filters (`filterStartDate`, `filterEndDate`, `filterProductId`)
+  - [ ] Create the filter bar (Date Pickers and Item Dropdown) inside the *Active Swaps* tab
+  - [ ] Call `loadSwaps()` on filter change
 
 ---
 
-## 3. ✏️ Modifica Ordine Swap (`PUT /api/swaps/:id`)
+## 3. ✏️ Edit Swap Order (`PUT /api/swaps/:id`)
 - [ ] **Backend (`server.js` / `routes/swaps.js`)**
-  - [ ] Creare l'endpoint `PUT /api/swaps/:id`
-  - [ ] Implementare la transazione SQL (`beginTransaction`, `commit`, `rollback`):
-    - [ ] Ripristinare a `'available'` i capi dello swap precedente
-    - [ ] Svuotare le relazioni pivot `swap_order_products` e `swap_order_users` per quel `order_id`
-    - [ ] Inserire i nuovi partecipanti e capi
-    - [ ] Aggiornare lo stato dei nuovi capi a `'swapped'`
+  - [ ] Create the `PUT /api/swaps/:id` endpoint
+  - [ ] Implement SQL transaction (`beginTransaction`, `commit`, `rollback`):
+    - [ ] Reset previous swap items back to `'available'`
+    - [ ] Clear pivot table relations `swap_order_products` and `swap_order_users` for that `order_id`
+    - [ ] Insert new participants and items
+    - [ ] Update the status of new items to `'swapped'`
 - [ ] **Client API (`src/api/client.js`)**
-  - [ ] Creare la funzione `updateSwap(swapId, payload)`
+  - [ ] Create the `updateSwap(swapId, payload)` function
 - [ ] **Frontend (`SwapCard.jsx` & `App.jsx`)**
-  - [ ] Aggiungere il bottone "Modifica" sulla `SwapCard`
-  - [ ] Creare il modal o riutilizzare `SwapRecord` per la modifica degli swap esistenti
+  - [ ] Add the "Edit" button on `SwapCard`
+  - [ ] Create a modal or reuse `SwapRecord` to edit existing swaps
 
 ---
 
-## 4. 📑 Conformità Consegna e Checklist Finale
-- [ ] **File di Migrazione:** Creare/duplicare `migrations.sql` nella root del progetto partendo da `schema.sql`
-- [ ] **Sicurezza:** Verificare che tutte le query MySQL usino Prepared Statements (nessuna concatenazione diretta di stringhe)
-- [ ] **REST Standard:** Verificare naming rotte plurali e status code HTTP (`200`, `201`, `400`, `404`, `500`)
+## 4. 📑 Delivery Compliance & Final Checklist
+- [ ] **Migration File:** Create/duplicate `migrations.sql` in the project root from `schema.sql`
+- [ ] **Security:** Verify that all MySQL queries use Prepared Statements (no direct string concatenation)
+- [ ] **REST Standards:** Verify plural route naming and HTTP status codes (`200`, `201`, `400`, `404`, `500`)
