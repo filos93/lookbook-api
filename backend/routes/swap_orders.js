@@ -54,7 +54,7 @@ async function validateSwapData(connection, userIds, productIds) {
     const prod1 = products.find(p => p.id === p1);
     const prod2 = products.find(p => p.id === p2);
 
-    // 6. Verifica la coerenza proprietario-prodotto
+    // 6. Verifica la coerenza proprietario-prodotto (1 capo per utente)
     const validOwnership = 
         (prod1.user_id === u1 && prod2.user_id === u2) ||
         (prod1.user_id === u2 && prod2.user_id === u1);
@@ -115,7 +115,7 @@ router.get('/', async (req, res) => {
             `, [swap.id]);
 
             const [products] = await pool.execute(`
-                SELECT p.id, p.name, p.price, p.status 
+                SELECT p.id, p.name, p.price, p.status, p.user_id AS owner_id 
                 FROM products p
                 JOIN swap_order_products sop ON p.id = sop.product_id
                 WHERE sop.order_id = ?
@@ -134,16 +134,18 @@ router.get('/', async (req, res) => {
     }
 });
 
+
 // POST /api/swaps - Creazione ordine swap
 router.post('/', async (req, res) => {
     const connection = await pool.getConnection();
     try {
-        const { user_ids, product_ids } = req.body;
+        // Supporta sia user_ids / product_ids che userIds / productIds
+        const userIds = req.body.user_ids || req.body.userIds;
+        const productIds = req.body.product_ids || req.body.productIds;
 
         // Validazione stringente
-        const { isValid, errors, cleanUserIds, cleanProductIds } = await validateSwapData(connection, user_ids, product_ids);
+        const { isValid, errors, cleanUserIds, cleanProductIds } = await validateSwapData(connection, userIds, productIds);
         if (!isValid) {
-            connection.release();
             return res.status(400).json({ error: errors.join(' ') });
         }
 
@@ -180,7 +182,10 @@ router.post('/', async (req, res) => {
 // PUT /api/swaps/:id - Modifica utenti o prodotti partecipanti allo swap
 router.put('/:id', async (req, res) => {
     const { id } = req.params;
-    const { user_ids, product_ids } = req.body;
+    // Supporta sia user_ids / product_ids che userIds / productIds
+    const userIds = req.body.user_ids || req.body.userIds;
+    const productIds = req.body.product_ids || req.body.productIds;
+
     const connection = await pool.getConnection();
 
     try {
@@ -193,7 +198,7 @@ router.put('/:id', async (req, res) => {
             return res.status(404).json({ error: 'Ordine swap non trovato' });
         }
 
-        if (user_ids && product_ids) {
+        if (userIds && productIds) {
             // Ripristina temporaneamente i vecchi capi dell'ordine a 'available' per consentire la re-validazione
             const [oldProducts] = await connection.execute('SELECT product_id FROM swap_order_products WHERE order_id = ?', [id]);
             const oldProductIds = oldProducts.map(p => p.product_id);
@@ -207,7 +212,7 @@ router.put('/:id', async (req, res) => {
             }
 
             // Validazione dei nuovi dati
-            const { isValid, errors, cleanUserIds, cleanProductIds } = await validateSwapData(connection, user_ids, product_ids);
+            const { isValid, errors, cleanUserIds, cleanProductIds } = await validateSwapData(connection, userIds, productIds);
             if (!isValid) {
                 await connection.rollback();
                 return res.status(400).json({ error: errors.join(' ') });
@@ -234,7 +239,7 @@ router.put('/:id', async (req, res) => {
         }
 
         await connection.commit();
-        res.json({ message: `Ordine swap #${id} aggiornato con successo`, id: Number(id), user_ids, product_ids });
+        res.json({ message: `Ordine swap #${id} aggiornato con successo`, id: Number(id), user_ids: userIds, product_ids: productIds });
     } catch (error) {
         await connection.rollback();
         res.status(500).json({ error: 'Errore aggiornamento ordine swap', details: error.message });
@@ -242,6 +247,7 @@ router.put('/:id', async (req, res) => {
         connection.release();
     }
 });
+
 
 // DELETE /api/swaps/:id - Eliminazione ordine swap e ripristino stato prodotti a 'available'
 router.delete('/:id', async (req, res) => {

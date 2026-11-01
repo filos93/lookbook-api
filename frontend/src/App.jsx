@@ -4,7 +4,7 @@ import StatsOverview from './components/StatsOverview';
 import ProductCard from './components/ProductCard';
 import SwapRecord from './components/SwapRecord';
 import SwapCard from './components/SwapCard';
-import UserRegisterModal from './components/UserRegisterModal';
+import AddUserModal from './components/AddUserModal';
 import AddProductModal from './components/AddProductModal';
 import EditUserModal from './components/EditUserModal';
 import EditProductModal from './components/EditProductModal';
@@ -448,7 +448,7 @@ export default function App() {
       </main>
 
       {/* Modals per Creazione */}
-      <UserRegisterModal
+      <AddUserModal
         isOpen={isUserModalOpen}
         onClose={() => setIsUserModalOpen(false)}
         onUserCreated={() => loadAllData()}

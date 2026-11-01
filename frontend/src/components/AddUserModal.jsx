@@ -4,7 +4,7 @@ import { createUser } from '../api/client';
 // Regex client per consentire lettere (anche accentate), spazi, apostrofi e trattini (no cifre/caratteri speciali)
 const NAME_REGEX = /^[A-Za-zÀ-ÖØ-öø-ÿ\s'-]+$/;
 
-export default function UserRegisterModal({ isOpen, onClose, onUserCreated }) {
+export default function AddUserModal({ isOpen, onClose, onUserCreated }) {
   const [formData, setFormData] = useState({ name: '', surname: '', email: '' });
   const [errorMessage, setErrorMessage] = useState('');
   const [loading, setLoading] = useState(false);
