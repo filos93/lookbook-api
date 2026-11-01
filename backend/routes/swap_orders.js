@@ -67,18 +67,42 @@ async function validateSwapData(connection, userIds, productIds) {
 }
 
 
-// GET /api/swaps - Elenco degli ordini swap con valore totale scambiato
+// GET /api/swaps - Elenco ordini swap con filtri per Data (singola o range) e Prodotto
 router.get('/', async (req, res) => {
     try {
-        const { date } = req.query;
-        let query = 'SELECT id, created_at FROM swap_orders';
+        const { date, startDate, endDate, productId } = req.query;
+        let query = 'SELECT DISTINCT s.id, s.created_at FROM swap_orders s';
         const params = [];
+        const whereClauses = [];
 
+        // Filtro per data singola
         if (date) {
-            query += ' WHERE DATE(created_at) = ?';
+            whereClauses.push('DATE(s.created_at) = ?');
             params.push(date);
         }
-        query += ' ORDER BY id DESC';
+
+        // Filtro per range di date (Inizio e Fine)
+        if (startDate) {
+            whereClauses.push('DATE(s.created_at) >= ?');
+            params.push(startDate);
+        }
+
+        if (endDate) {
+            whereClauses.push('DATE(s.created_at) <= ?');
+            params.push(endDate);
+        }
+
+        // Filtro per Prodotto specifico contenuto nello swap
+        if (productId) {
+            whereClauses.push('s.id IN (SELECT order_id FROM swap_order_products WHERE product_id = ?)');
+            params.push(productId);
+        }
+
+        if (whereClauses.length > 0) {
+            query += ' WHERE ' + whereClauses.join(' AND ');
+        }
+
+        query += ' ORDER BY s.id DESC';
 
         const [swaps] = await pool.execute(query, params);
 
@@ -136,7 +160,6 @@ router.post('/', async (req, res) => {
             await connection.execute('INSERT INTO swap_order_products (order_id, product_id) VALUES (?, ?)', [orderId, productId]);
         }
 
-        // --- OPZIONE CONSIGLIATA: Parametro posizionale (sicuro al 100%) ---
         await connection.execute(
             'UPDATE products SET status = ? WHERE id IN (?, ?)', 
             ['swapped', cleanProductIds[0], cleanProductIds[1]]
@@ -146,7 +169,7 @@ router.post('/', async (req, res) => {
         res.status(201).json({ id: orderId, user_ids: cleanUserIds, product_ids: cleanProductIds });
     } catch (error) {
         await connection.rollback();
-        console.error('Errore durante la creazione dello swap:', error); // Log per vedere dettagli nel terminale
+        console.error('Errore durante la creazione dello swap:', error);
         res.status(500).json({ error: 'Errore creazione ordine swap', details: error.message });
     } finally {
         connection.release();
@@ -171,21 +194,43 @@ router.put('/:id', async (req, res) => {
         }
 
         if (user_ids && product_ids) {
+            // Ripristina temporaneamente i vecchi capi dell'ordine a 'available' per consentire la re-validazione
+            const [oldProducts] = await connection.execute('SELECT product_id FROM swap_order_products WHERE order_id = ?', [id]);
+            const oldProductIds = oldProducts.map(p => p.product_id);
+
+            if (oldProductIds.length > 0) {
+                const placeholders = oldProductIds.map(() => '?').join(',');
+                await connection.execute(
+                    `UPDATE products SET status = 'available' WHERE id IN (${placeholders})`,
+                    oldProductIds
+                );
+            }
+
+            // Validazione dei nuovi dati
             const { isValid, errors, cleanUserIds, cleanProductIds } = await validateSwapData(connection, user_ids, product_ids);
             if (!isValid) {
                 await connection.rollback();
                 return res.status(400).json({ error: errors.join(' ') });
             }
 
+            // Elimina vecchie associazioni pivot
             await connection.execute('DELETE FROM swap_order_users WHERE order_id = ?', [id]);
+            await connection.execute('DELETE FROM swap_order_products WHERE order_id = ?', [id]);
+
+            // Inserisci nuove associazioni pivot
             for (const userId of cleanUserIds) {
                 await connection.execute('INSERT INTO swap_order_users (order_id, user_id) VALUES (?, ?)', [id, userId]);
             }
 
-            await connection.execute('DELETE FROM swap_order_products WHERE order_id = ?', [id]);
             for (const productId of cleanProductIds) {
                 await connection.execute('INSERT INTO swap_order_products (order_id, product_id) VALUES (?, ?)', [id, productId]);
             }
+
+            // Aggiorna lo stato dei nuovi capi a 'swapped'
+            await connection.execute(
+                'UPDATE products SET status = ? WHERE id IN (?, ?)',
+                ['swapped', cleanProductIds[0], cleanProductIds[1]]
+            );
         }
 
         await connection.commit();
@@ -220,7 +265,7 @@ router.delete('/:id', async (req, res) => {
         await connection.execute('DELETE FROM swap_order_products WHERE order_id = ?', [id]);
         await connection.execute('DELETE FROM swap_orders WHERE id = ?', [id]);
 
-        // 3. RIPRISTINO STATO PRODOTTI A 'available' (Usa ? per evitare syntax error MySQL)
+        // 3. Ripristino stato prodotti a 'available'
         if (productIds.length > 0) {
             const placeholders = productIds.map(() => '?').join(',');
             await connection.execute(

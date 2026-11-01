@@ -38,6 +38,11 @@ export default function App() {
   const [editingUser, setEditingUser] = useState(null);
   const [editingProduct, setEditingProduct] = useState(null);
 
+  // Swap Filters State (Task 2)
+  const [startDateFilter, setStartDateFilter] = useState('');
+  const [endDateFilter, setEndDateFilter] = useState('');
+  const [productFilter, setProductFilter] = useState('');
+
   // Custom Confirmation Modal State
   const [confirmModal, setConfirmModal] = useState({
     isOpen: false,
@@ -51,7 +56,11 @@ export default function App() {
     try {
       const [pData, sData, uData] = await Promise.all([
         fetchProducts(),
-        fetchSwaps(),
+        fetchSwaps({
+          startDate: startDateFilter,
+          endDate: endDateFilter,
+          productId: productFilter
+        }),
         fetchUsers()
       ]);
       setProducts(pData || []);
@@ -64,12 +73,39 @@ export default function App() {
     }
   };
 
+  // Caricamento iniziale
   useEffect(() => {
     loadAllData();
   }, []);
 
+  // Ricarica dinamica degli swap quando cambiano i filtri
+  useEffect(() => {
+    const loadFilteredSwaps = async () => {
+      try {
+        const filteredSwaps = await fetchSwaps({
+          startDate: startDateFilter,
+          endDate: endDateFilter,
+          productId: productFilter
+        });
+        setSwaps(filteredSwaps || []);
+      } catch (err) {
+        console.error('Errore durante il filtraggio degli swap:', err);
+      }
+    };
+
+    if (!loading) {
+      loadFilteredSwaps();
+    }
+  }, [startDateFilter, endDateFilter, productFilter]);
+
   const closeConfirmModal = () => {
     setConfirmModal({ isOpen: false, title: '', message: '', confirmText: 'Elimina', onConfirm: null });
+  };
+
+  const handleResetSwapFilters = () => {
+    setStartDateFilter('');
+    setEndDateFilter('');
+    setProductFilter('');
   };
 
   // Creazione Swap
@@ -288,16 +324,76 @@ export default function App() {
           </div>
         )}
 
-        {/* Ordini Swap */}
+        {/* Ordini Swap & Barra dei Filtri */}
         {activeTab === 'swaps' && (
-          <div className="space-y-4">
-            {swaps.length === 0 ? (
-              <p className="text-gray-500 italic">Nessun ordine swap registrato.</p>
-            ) : (
-              swaps.map((s) => (
-                <SwapCard key={s.id} swap={s} onDelete={() => promptDeleteSwap(s.id)} />
-              ))
-            )}
+          <div className="space-y-6">
+            {/* Barra dei Filtri per Data e Prodotto */}
+            <div className="bg-[#121624] border border-[#1f263e] rounded-xl p-4 flex flex-wrap items-center justify-between gap-4 shadow-lg">
+              <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+                {/* Data Inizio */}
+                <div className="flex flex-col">
+                  <label className="text-[10px] font-bold uppercase text-gray-400 mb-1">Da Data</label>
+                  <input
+                    type="date"
+                    value={startDateFilter}
+                    onChange={(e) => setStartDateFilter(e.target.value)}
+                    className="bg-[#0b0e17] border border-[#1f263e] text-white text-xs rounded-lg px-3 py-2 focus:outline-none focus:border-[#6366f1]"
+                  />
+                </div>
+
+                {/* Data Fine */}
+                <div className="flex flex-col">
+                  <label className="text-[10px] font-bold uppercase text-gray-400 mb-1">A Data</label>
+                  <input
+                    type="date"
+                    value={endDateFilter}
+                    onChange={(e) => setEndDateFilter(e.target.value)}
+                    className="bg-[#0b0e17] border border-[#1f263e] text-white text-xs rounded-lg px-3 py-2 focus:outline-none focus:border-[#6366f1]"
+                  />
+                </div>
+
+                {/* Dropdown Prodotto Contenuto */}
+                <div className="flex flex-col min-w-[200px]">
+                  <label className="text-[10px] font-bold uppercase text-gray-400 mb-1">Filtra per Capo Contenuto</label>
+                  <select
+                    value={productFilter}
+                    onChange={(e) => setProductFilter(e.target.value)}
+                    className="bg-[#0b0e17] border border-[#1f263e] text-white text-xs rounded-lg px-3 py-2 focus:outline-none focus:border-[#6366f1]"
+                  >
+                    <option value="">Tutti i capi</option>
+                    {products.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} (€{Number(p.price || 0).toFixed(2)})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Pulsante Reset Filtri */}
+              {(startDateFilter || endDateFilter || productFilter) && (
+                <button
+                  onClick={handleResetSwapFilters}
+                  className="px-3 py-2 bg-[#1b2238] hover:bg-[#252f4e] text-gray-300 text-xs font-semibold rounded-lg border border-[#2d3758] transition flex items-center space-x-1"
+                >
+                  <span>↺</span>
+                  <span>Reset Filtri</span>
+                </button>
+              )}
+            </div>
+
+            {/* Lista Ordini Swap */}
+            <div className="space-y-4">
+              {swaps.length === 0 ? (
+                <p className="text-gray-500 italic p-4 text-center bg-[#121624] border border-[#1f263e] rounded-xl">
+                  Nessun ordine swap corrisponde ai filtri selezionati.
+                </p>
+              ) : (
+                swaps.map((s) => (
+                  <SwapCard key={s.id} swap={s} onDelete={() => promptDeleteSwap(s.id)} />
+                ))
+              )}
+            </div>
           </div>
         )}
 

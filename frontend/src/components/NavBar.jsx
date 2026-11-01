@@ -1,3 +1,5 @@
+import logo from '../assets/logo.png';
+
 export default function Navbar({ 
   searchQuery = '', 
   setSearchQuery, 
@@ -21,9 +23,11 @@ export default function Navbar({
         
         {/* Brand Logo */}
         <div className="flex items-center space-x-3">
-          <div className="bg-[#4f46e5] p-2 rounded-lg text-white font-bold text-xl">
-            ⇄
-          </div>
+          <img 
+            src={logo} 
+            alt="LookBook Swap Studio Logo" 
+            className="w-10 h-10 rounded-lg object-cover border border-[#1f263e] shadow-md"
+          />
           <div className="flex items-baseline space-x-2">
             <span className="text-xl font-bold text-white tracking-wide">LookBook</span>
             <span className="bg-[#1f263e] text-[#818cf8] text-xs font-semibold px-2 py-0.5 rounded-full">

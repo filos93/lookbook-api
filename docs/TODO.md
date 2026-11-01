@@ -1,18 +1,5 @@
 # 📋 TODO List - Swap Studio Milestones
 
-## 2. 🔍 Swap Orders Filtering (Date and Products)
-- [ ] **Backend (`server.js` / `routes/swaps.js`)**
-  - [ ] Extend `GET /api/swaps` to accept query parameters `startDate`, `endDate`, and `productId`
-  - [ ] Build the dynamic MySQL query using **Prepared Statements** (`?`)
-- [ ] **Client API (`src/api/client.js`)**
-  - [ ] Update `fetchSwaps(filters)` to convert filters into `URLSearchParams`
-- [ ] **Frontend (`App.jsx`)**
-  - [ ] Add local state for filters (`filterStartDate`, `filterEndDate`, `filterProductId`)
-  - [ ] Create the filter bar (Date Pickers and Item Dropdown) inside the *Active Swaps* tab
-  - [ ] Call `loadSwaps()` on filter change
-
----
-
 ## 3. ✏️ Edit Swap Order (`PUT /api/swaps/:id`)
 - [ ] **Backend (`server.js` / `routes/swaps.js`)**
   - [ ] Create the `PUT /api/swaps/:id` endpoint

@@ -78,8 +78,17 @@ export async function updateProduct(id, data) {
 }
 
 // --- SWAPS ---
-export const fetchSwaps = async () => {
-  const res = await fetch(`${API_BASE}/swaps`);
+export const fetchSwaps = async (filters = {}) => {
+  const params = new URLSearchParams();
+  if (filters.startDate) params.append('startDate', filters.startDate);
+  if (filters.endDate) params.append('endDate', filters.endDate);
+  if (filters.productId) params.append('productId', filters.productId);
+  if (filters.date) params.append('date', filters.date);
+
+  const queryString = params.toString();
+  const url = queryString ? `${API_BASE}/swaps?${queryString}` : `${API_BASE}/swaps`;
+
+  const res = await fetch(url);
   return handleResponse(res, 'Errore nel caricamento degli ordini swap');
 };
 
