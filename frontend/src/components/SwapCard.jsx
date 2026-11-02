@@ -1,3 +1,5 @@
+import React from 'react';
+
 export default function SwapCard({ swap, onDelete, onEdit }) {
   if (!swap) return null;
 
@@ -9,10 +11,8 @@ export default function SwapCard({ swap, onDelete, onEdit }) {
       })
     : 'Data non disponibile';
 
-  // Formattazione dell'ID come Codice di Riferimento univoco (es. #SWAP-0004)
   const swapRef = `#SWAP-${String(swap.id).padStart(4, '0')}`;
 
-  // Parsing e guardrail sicuri per gli array di partecipanti e prodotti
   const parseList = (data) => {
     if (Array.isArray(data)) return data;
     if (typeof data === 'string' && data.trim() !== '') {
@@ -30,51 +30,56 @@ export default function SwapCard({ swap, onDelete, onEdit }) {
 
   return (
     <div className="border border-[#1f263e] rounded-xl p-5 bg-[#121624] shadow-2xl space-y-4 text-gray-200">
-      {/* Header Card */}
-      <div className="flex justify-between items-center border-b border-[#1f263e] pb-3">
-        <div className="flex items-center space-x-3">
-          <div className="w-9 h-9 rounded-lg bg-[#10b981]/10 border border-[#10b981]/30 flex items-center justify-center text-[#10b981] font-bold text-sm">
+      {/* Header Card Anti-Accavallamento */}
+      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-b border-[#1f263e] pb-4">
+        {/* Blocco Sinistro: Icona + Codice Ordine + Badge + Data */}
+        <div className="flex items-center space-x-3 min-w-0">
+          <div className="w-10 h-10 rounded-lg bg-[#10b981]/10 border border-[#10b981]/30 flex items-center justify-center text-[#10b981] font-bold text-base shrink-0">
             ⇄
           </div>
-          <div>
-            <div className="flex items-center space-x-2">
-              <span className="font-bold text-white text-base">Ordine {swapRef}</span>
-              <span className="bg-[#10b981]/20 text-[#10b981] text-[10px] font-bold px-2 py-0.5 rounded-full border border-[#10b981]/30">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="font-bold text-white text-base whitespace-nowrap">
+                Ordine <span className="text-indigo-400">{swapRef}</span>
+              </h3>
+              <span className="shrink-0 bg-[#10b981]/20 text-[#10b981] text-[10px] font-bold px-2 py-0.5 rounded-full border border-[#10b981]/30 whitespace-nowrap">
                 Completato
               </span>
             </div>
-            <p className="text-xs text-gray-400">{formattedDate}</p>
+            <p className="text-xs text-gray-400 mt-0.5">{formattedDate}</p>
           </div>
         </div>
 
-        {/* Azioni & Valore Totale */}
-        <div className="flex items-center space-x-3">
-          <div className="text-right hidden sm:block mr-2">
-            <p className="text-[10px] uppercase font-semibold text-gray-400 tracking-wider">
+        {/* Blocco Destro: Valore Scambiato + Pulsanti Azione */}
+        <div className="flex items-center gap-4 flex-wrap shrink-0 ml-auto">
+          <div className="text-right">
+            <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider whitespace-nowrap">
               Valore Scambiato
             </p>
-            <p className="text-sm font-bold text-emerald-400">
+            <p className="text-sm font-bold text-emerald-400 whitespace-nowrap">
               €{Number(swap.total_gross_value || 0).toFixed(2)}
             </p>
           </div>
 
-          {onEdit && (
-            <button
-              onClick={() => onEdit(swap)}
-              className="px-3 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 rounded-lg text-xs font-semibold transition active:scale-95"
-            >
-              Modifica
-            </button>
-          )}
+          <div className="flex items-center space-x-2">
+            {onEdit && (
+              <button
+                onClick={() => onEdit(swap)}
+                className="px-3 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 rounded-lg text-xs font-semibold transition active:scale-95 whitespace-nowrap"
+              >
+                Modifica
+              </button>
+            )}
 
-          {onDelete && (
-            <button
-              onClick={() => onDelete(swap.id)}
-              className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg text-xs font-semibold transition active:scale-95"
-            >
-              Cancella
-            </button>
-          )}
+            {onDelete && (
+              <button
+                onClick={() => onDelete(swap)}
+                className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg text-xs font-semibold transition active:scale-95 whitespace-nowrap"
+              >
+                Cancella
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -93,12 +98,14 @@ export default function SwapCard({ swap, onDelete, onEdit }) {
               usersList.map((u, idx) => (
                 <li
                   key={u.id || idx}
-                  className="flex justify-between items-center bg-[#121624] p-2 rounded-lg border border-[#1f263e]/60"
+                  className="flex justify-between items-center bg-[#121624] p-2.5 rounded-lg border border-[#1f263e]/60 min-w-0 gap-2"
                 >
-                  <span className="font-medium text-white">
+                  <span className="font-medium text-white truncate min-w-0">
                     {u.name} {u.surname}
                   </span>
-                  <span className="text-[11px] text-gray-400">{u.email}</span>
+                  <span className="text-[11px] text-gray-400 truncate shrink-0">
+                    {u.email}
+                  </span>
                 </li>
               ))
             )}
@@ -118,11 +125,13 @@ export default function SwapCard({ swap, onDelete, onEdit }) {
               productsList.map((p, idx) => (
                 <li
                   key={p.id || idx}
-                  className="flex justify-between items-center bg-[#121624] p-2 rounded-lg border border-[#1f263e]/60"
+                  className="flex justify-between items-center bg-[#121624] p-2.5 rounded-lg border border-[#1f263e]/60 min-w-0 gap-2"
                 >
-                  <div className="flex items-center space-x-2 truncate">
-                    <span className="capitalize font-medium text-white truncate">{p.name}</span>
-                    <span className="bg-amber-500/10 text-amber-400 text-[9px] font-bold px-1.5 py-0.5 rounded border border-amber-500/20">
+                  <div className="flex items-center space-x-2 truncate min-w-0 flex-1">
+                    <span className="capitalize font-medium text-white truncate min-w-0" title={p.name}>
+                      {p.name}
+                    </span>
+                    <span className="shrink-0 bg-amber-500/10 text-amber-400 text-[9px] font-bold px-1.5 py-0.5 rounded border border-amber-500/20">
                       Scambiato
                     </span>
                   </div>

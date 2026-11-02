@@ -93,11 +93,15 @@ export default function SwapRecord({ products = [], preselectedProduct = null, o
         <h2 className="text-xl font-bold text-white">Crea Nuovo Scambio (Swap)</h2>
       </div>
 
-      {/* Descrizione dinamica in base alla selezione */}
+      {/* Descrizione dinamica in base alla pre-selezione */}
       <p className="text-xs text-gray-400 mb-4">
-        {selectedProducts.length === 1
-          ? 'Seleziona il secondo capo da un proprietario differente per completare la proposta di scambio.'
-          : 'Seleziona 2 capi disponibili da due proprietari differenti per completare una proposta di scambio.'}
+        {selectedProducts.length === 1 ? (
+          <span>
+            Primo capo selezionato: <strong className="text-white">"{selectedProducts[0].name}"</strong>. Seleziona il secondo capo da un proprietario differente per completare la proposta di scambio.
+          </span>
+        ) : (
+          'Seleziona 2 capi disponibili da due proprietari differenti per completare una proposta di scambio.'
+        )}
       </p>
 
       {/* Banner Errore In-line */}
@@ -126,7 +130,7 @@ export default function SwapRecord({ products = [], preselectedProduct = null, o
             <div
               key={p.id}
               onClick={() => !isCardDisabled && toggleSelectProduct(p)}
-              className={`p-3.5 border rounded-xl transition flex justify-between items-center relative overflow-hidden ${
+              className={`p-3.5 border rounded-xl transition flex justify-between items-center relative overflow-hidden gap-3 ${
                 isSwapped
                   ? 'opacity-40 cursor-not-allowed border-gray-800 bg-[#090b12]'
                   : isCardDisabled
@@ -136,11 +140,13 @@ export default function SwapRecord({ products = [], preselectedProduct = null, o
                   : 'border-[#1f263e] bg-[#0b0e17] hover:border-[#2d3758] cursor-pointer'
               }`}
             >
-              <div className="space-y-0.5">
-                <div className="flex items-center space-x-2">
-                  <p className="text-sm font-medium text-white capitalize truncate">{p.name}</p>
+              <div className="space-y-0.5 min-w-0 flex-1">
+                <div className="flex items-center justify-between gap-2 min-w-0">
+                  <p className="text-sm font-medium text-white capitalize truncate min-w-0" title={p.name}>
+                    {p.name}
+                  </p>
                   {isSwapped && (
-                    <span className="bg-amber-500/10 text-amber-400 text-[9px] font-bold px-1.5 py-0.5 rounded border border-amber-500/20">
+                    <span className="shrink-0 bg-amber-500/10 text-amber-400 text-[9px] font-bold px-1.5 py-0.5 rounded border border-amber-500/20">
                       SCAMBIATO
                     </span>
                   )}
@@ -149,7 +155,7 @@ export default function SwapRecord({ products = [], preselectedProduct = null, o
                   €{Number(p.price || 0).toFixed(2)}
                 </p>
                 {p.owner_name && (
-                  <p className="text-[11px] text-gray-400">
+                  <p className="text-[11px] text-gray-400 truncate">
                     Proprietario: <span className="text-gray-300">{p.owner_name}</span>
                   </p>
                 )}

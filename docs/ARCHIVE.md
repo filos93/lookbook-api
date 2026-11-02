@@ -1,8 +1,14 @@
 # 📜 Project Archive & Changelog
 
+## [02/11/2026] Modular Deletion & Component Refactoring
+- [X] **`DeleteUserModal.jsx`**: Verify standalone modal renders properly and confirms deletion of specified user and associated records.
+- [X] **`DeleteProductModal.jsx`**: Verify standalone modal renders properly and confirms deletion of selected catalog item.
+- [X] **`DeleteSwapModal.jsx`**: Verify standalone modal renders properly, displays reference code (e.g., `#SWP-0001`), and restores items to `available` upon cancellation.
+- [X] **`App.jsx` Lightening**: Confirm `App.jsx` cleanly delegates state management to the 3 distinct deletion modals without inline confirmation duplication.
+
 ---
 
-## [2026-11-01] ✏️ Edit Swap Order (`PUT /api/swaps/:id`)
+## [01/11/2026] ✏️ Edit Swap Order (`PUT /api/swaps/:id`)
 - [X] **Backend (`server.js` / `routes/swaps.js`)**
   - [X] Create the `PUT /api/swaps/:id` endpoint
   - [X] Implement SQL transaction (`beginTransaction`, `commit`, `rollback`):
@@ -16,7 +22,7 @@
   - [X] Add the "Edit" button on `SwapCard`
   - [X] Create a modal or reuse `SwapRecord` to edit existing swaps
 
-## [2026-11-01] 🔍 Swap Orders Filtering (Date and Products)
+## [01/11/2026] 🔍 Swap Orders Filtering (Date and Products)
 - [X] **Backend (`server.js` / `routes/swaps.js`)**
   - [X] Extend `GET /api/swaps` to accept query parameters `startDate`, `endDate`, and `productId`
   - [X] Build the dynamic MySQL query using **Prepared Statements** (`?`)
@@ -27,7 +33,7 @@
   - [X] Create the filter bar (Date Pickers and Item Dropdown) inside the *Active Swaps* tab
   - [X] Call `loadSwaps()` on filter change
 
-## [2026-11-01] 🎯 UX Fix: Item Pre-selection in Swap
+## [01/11/2026] 🎯 UX Fix: Item Pre-selection in Swap
 - [X] **`App.jsx`**
   - [X] Add `preselectedProduct` state
   - [X] Implement `handleStartSwapWithProduct(product)` to set the item and open the Swap Builder
