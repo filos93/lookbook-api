@@ -1,14 +1,31 @@
 # 📋 TODO List - Swap Studio Milestones
 
-## 2. Backend Validation & Security (`PUT /api/swaps/:id`)
-- [ ] **Selection Constraints**: Verify that `EditSwapModal.jsx` strictly requires **exactly 2 users** and **exactly 2 items**.
-- [ ] **Ownership Rules**: Confirm that items can only be assigned to their respective owners among the 2 selected participants (1 item per user).
-- [ ] **Swapped Items Logic**:
-  - [ ] Confirm items already in the swap currently being edited remain selectable.
-  - [ ] Ensure items swapped in *other* orders are filtered out/hidden.
-- [ ] **Transaction Integrity (Rollback)**: Send an invalid payload (e.g., 1 user or 3 items) and verify MySQL executes `rollback()`, keeping item statuses consistent (`available` vs `swapped`).
+## 1. UI Refactoring ("Scambia" Text Simplification)
+- [ ] Audit button labels and modal text across `frontend/src/` components.
+- [ ] Simplify text strings for clarity and conciseness.
+- [ ] Update UI query selectors in `frontend/src/__tests__/App.swaps.test.jsx`.
+- [ ] Run `npm test` inside `frontend/` to ensure all Vitest integration tests pass.
 
-## 3. 📑 Delivery Compliance & Final Checklist
-- [ ] **Migration File:** Create/duplicate `migrations.sql` in the project root from `schema.sql`
-- [ ] **Security:** Verify that all MySQL queries use Prepared Statements (no direct string concatenation)
-- [ ] **REST Standards:** Verify plural route naming and HTTP status codes (`200`, `201`, `400`, `404`, `500`)
+---
+
+## 2. Security & Best Practices Checklist
+- [ ] **SQL Injection:** Confirm all MySQL queries in `backend/` use parameterized statements (`pool.execute(sql, [params])`).
+- [ ] **Input Validation:** Validate request body data types (`user_ids`, `product_ids`) before DB transactions.
+- [ ] **Error Sanitization:** Verify catch blocks return standard status codes/messages without exposing stack traces.
+- [ ] **Secrets Management:** Ensure `.env` is listed in `.gitignore` and `.env.example` contains sanitized placeholder keys.
+
+---
+
+## 3. GitHub Repository & Documentation
+- [ ] Check `.gitignore` rules for `node_modules`, build artifacts (`dist/`), and log files.
+- [ ] Commit updated test configurations for both frontend (Vitest) and backend (Mocha/Chai).
+- [ ] Update `README.md` with step-by-step setup and test execution commands (`npm test`).
+
+---
+
+## 4. Canva Presentation Outline
+- [ ] **Slide 1: Title** — LookBook Swap Studio Overview
+- [ ] **Slide 2: Core Concept** — Sustainable Clothing Swap Platform & User Workflow
+- [ ] **Slide 3: Stack & Architecture** — React/Vite Frontend + Node.js/Express Backend + MySQL DB
+- [ ] **Slide 4: Testing & Reliability** — Automated Integration Testing (Vitest + Mocha/Chai/Sinon)
+- [ ] **Slide 5: Key Learnings & Next Steps** — Security enhancements, scalable state management, deployment
