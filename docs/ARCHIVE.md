@@ -1,5 +1,32 @@
 # 📜 Project Archive & Changelog
 
+## [04/11/2026] Security & Best Practices Checklist
+- [X] **Secrets Management & Environment Audit:**
+  - [X] Ensure `.env` is listed in `.gitignore` and confirm it is untracked by Git (`git status`).
+  - [X] Update `.env.example` with all necessary sanitized placeholder keys.
+  - [X] Verify the Aiven database connection in `config/db.js` retains `DB_SSL=true`.
+- [X] **SQL Injection & Database Queries:**
+  - [X] Confirm all MySQL queries in `backend/` use parameterized statements (`pool.execute(sql, [params])` / `connection.execute(sql, [params])`).
+- [X] **Input Validation:**
+  - [X] Validate request body data types (`user_ids`, `product_ids`) and format rules before initiating DB transactions.
+- [X] **Error Sanitization & Code Cleanup:**
+  - [X] Verify catch blocks return standard status codes and clean messages without exposing raw stack traces.
+  - [X] Remove leftover `console.log` statements containing sensitive data, tokens, or credentials.
+- [X] **Code Audit & Vulnerabilities:**
+  - [X] Run `npm audit` in both `backend/` and `frontend/` directories to fix high/critical vulnerabilities.
+
+## [04/11/2026] Canva Presentation Outline
+- [X] **Slide 1: Title** — LookBook Swap Studio Overview
+- [X] **Slide 2: Core Concept** — Sustainable Clothing Swap Platform & User Workflow
+- [X] **Slide 3: Stack & Architecture** — React/Vite Frontend + Node.js/Express Backend + MySQL DB
+- [X] **Rest of Slides**
+
+## [04/11/2026] Backend/Frontend Testing
+- [X] Run `npm test` inside `backend/`.
+- [X] Run `npm test` inside `frontend/`.
+
+---
+
 ## [02/11/2026] Modular Deletion & Component Refactoring
 - [X] **`DeleteUserModal.jsx`**: Verify standalone modal renders properly and confirms deletion of specified user and associated records.
 - [X] **`DeleteProductModal.jsx`**: Verify standalone modal renders properly and confirms deletion of selected catalog item.

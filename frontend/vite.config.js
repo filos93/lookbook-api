@@ -7,7 +7,7 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://localhost:3000',
+        target: 'http://localhost:3000', // Ensure this matches Express server port
         changeOrigin: true
       }
     }
@@ -16,5 +16,11 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: './src/setupTests.js',
+    // Prevents infinite watch loops from generated files
+    exclude: ['**/node_modules/**', '**/dist/**', '**/coverage/**'],
+    // Cleans up React DOM and mock histories automatically between tests
+    clearMocks: true,
+    // Silences unhandled warnings during watch reruns
+    css: false,
   },
 });
