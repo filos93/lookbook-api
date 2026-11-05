@@ -1,4 +1,6 @@
-![LookBook Logo](./frontend/src/assets/logo.png)
+<p>
+  <img src="./frontend/src/assets/logo.png" alt="LookBook Logo" width="20%" />
+</p>
 
 # LookBook (Swap Studio)
 
