@@ -1,4 +1,6 @@
-# LookBook (Swap Studio) 🔄👗
+![LookBook Logo](./frontend/src/assets/logo.png)
+
+# LookBook (Swap Studio)
 
 LookBook is a full-stack web application and administrative management console for peer-to-peer clothing swaps and inventory control. Built with a modern React frontend and a robust Node.js/Express REST API backed by MySQL (Aiven Cloud or local), it features transactional swap management, dynamic photo handling, cascading data cleanup, and strict input validation.
 
@@ -19,13 +21,27 @@ LookBook is a full-stack web application and administrative management console f
 ```text
 lookbook-api/
 ├── backend/
-│   ├── config/          # Database configuration (db.js)
+│   ├── config/          # Database configuration plus initialization (db.js, init-db.js)
 │   ├── db/              # SQL schema and seeds (schema.sql, seeds.sql)
 │   ├── routes/          # Express API routes (users.js, products.js, swap_orders.js)
-│   ├── scripts/         # DB initialization script (init-db.js)
 │   ├── .env.example     # Backend environment template
 │   └── server.js        # Entry point
-└── frontend/            # React + Vite application
+├── docs/                # Project overview, TODO list, and project archive documentation
+├── frontend/
+│   ├── src/
+│   │   ├── api/         # Centralized API service methods & HTTP requests
+│   │   ├── assets/      # Static visual resources, icons, and media
+│   │   ├── components/  # Modular & reusable React UI components
+│   │   ├── hooks/       # Custom React hooks for business logic & state
+│   │   ├── App.jsx      # Main application router/layout entry point
+│   │   ├── main.jsx     # Vite React DOM root renderer
+│   │   └── index.css    # Global styles & Tailwind CSS imports
+│   ├── index.html       # Single-Page Application entry point HTML
+│   ├── postcss.config.js# PostCSS plugin configuration
+│   ├── tailwind.config.js# Tailwind CSS framework settings
+│   └── vite.config.js   # Vite bundler & Vitest test runner setup
+├── .gitignore           # Git untracked path rules
+└── README.md            # Main repository documentation & setup guide
 ```
 
 ---
@@ -144,9 +160,8 @@ npm audit
 
 ## ✅ Core Features
 
-- Peer-to-peer clothing exchange platform
 - Administrative inventory management
-- Product photo support
+- Peer-to-peer clothing exchange platform
 - Transactional swap processing
 - Automatic status synchronization
 - Cascading user and product cleanup

@@ -1,5 +1,12 @@
 # 📜 Project Archive & Changelog
 
+## [05/11/2026] GitHub Repository & Documentation
+- [X] Check `.gitignore` rules for `node_modules`, build artifacts (`dist/`), and log files.
+- [X] Commit updated test configurations for both frontend (Vitest) and backend (Mocha/Chai).
+- [X] Update `README.md` with step-by-step setup and test execution commands (`npm test`).
+
+---
+
 ## [04/11/2026] Security & Best Practices Checklist
 - [X] **Secrets Management & Environment Audit:**
   - [X] Ensure `.env` is listed in `.gitignore` and confirm it is untracked by Git (`git status`).
