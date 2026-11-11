@@ -1,5 +1,25 @@
 # 📜 Project Archive & Changelog
 
+[11/11/2026]
+
+## 2. API Logic & Performance Optimizations (Feedback 3 & 4)
+- [x] **Eliminate N+1 Queries in `GET /api/swaps`**
+  - [x] Replace per-order query loops ($2N+1$ queries) with batch queries using `WHERE order_id IN (...)` (or SQL `JOIN`s / `JSON_ARRAYAGG`).
+  - [x] Aggregate associated users and products in memory before returning the response.
+- [x] **Fix Payload Validation & Response in `PUT /api/swaps/:id`**
+  - [x] Add strict validation: return `400 Bad Request` if either required users or products arrays are missing.
+  - [x] Return the actual updated record from the database in the response, not the raw input body.
+
+## 1. Concurrency & Data Integrity (Feedback 1 & 2)
+- [X] **Fix Race Condition in Swap Creation (`POST /api/swaps` & `PUT /api/swaps/:id`)**
+  - [X] Open the database transaction *before* executing item validation.
+  - [X] Update product validation queries to use `SELECT ... FOR UPDATE` (pessimistic locking) to block concurrent requests on the same products.
+- [X] **Prevent Orphan Product Statuses (`PUT /api/products/:id`)**
+  - [X] Remove `status` from the list of editable fields in `PUT /api/products/:id`.
+  - [X] Restrict product status mutations exclusively to transactional swap creation (`POST /api/swaps`) and swap deletion (`DELETE /api/swaps`).
+
+---
+
 ## [05/11/2026] GitHub Repository & Documentation
 - [X] Check `.gitignore` rules for `node_modules`, build artifacts (`dist/`), and log files.
 - [X] Commit updated test configurations for both frontend (Vitest) and backend (Mocha/Chai).

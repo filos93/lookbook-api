@@ -44,16 +44,18 @@ function validateAndSanitizeProduct(data, isUpdate = false) {
         errors.push('Il campo user_id è obbligatorio.');
     }
 
-    // 4. STATUS ('available' o 'swapped')
-    if (data.status !== undefined) {
-        const validStatuses = ['available', 'swapped'];
-        if (!validStatuses.includes(data.status)) {
-            errors.push('Lo status deve essere "available" o "swapped".');
+    // 4. STATUS ('available' o 'swapped') - Inserimento iniziale consentito, ignorato in PUT per evitare capi bloccati
+    if (!isUpdate) {
+        if (data.status !== undefined) {
+            const validStatuses = ['available', 'swapped'];
+            if (!validStatuses.includes(data.status)) {
+                errors.push('Lo status deve essere "available" o "swapped".');
+            } else {
+                cleanData.status = data.status;
+            }
         } else {
-            cleanData.status = data.status;
+            cleanData.status = 'available'; // Default per i nuovi prodotti
         }
-    } else if (!isUpdate) {
-        cleanData.status = 'available'; // Default per i nuovi prodotti
     }
 
     // 5. ARRAY FOTO
@@ -142,7 +144,7 @@ router.post('/', async (req, res) => {
     }
 });
 
-// PUT /api/products/:id - Modifica prodotto (incluso status)
+// PUT /api/products/:id - Modifica prodotto (status rimosso dai campi modificabili)
 router.put('/:id', async (req, res) => {
     const { id } = req.params;
     
@@ -181,11 +183,12 @@ router.put('/:id', async (req, res) => {
         const updatedUserId = cleanData.user_id !== undefined ? cleanData.user_id : currentProduct.user_id;
         const updatedName = cleanData.name !== undefined ? cleanData.name : currentProduct.name;
         const updatedPrice = cleanData.price !== undefined ? cleanData.price : currentProduct.price;
-        const updatedStatus = cleanData.status !== undefined ? cleanData.status : currentProduct.status;
+        // Lo status originale del DB viene preservato invariato
+        const updatedStatus = currentProduct.status;
 
         await connection.execute(
-            'UPDATE products SET user_id = ?, name = ?, price = ?, status = ? WHERE id = ?',
-            [updatedUserId, updatedName, updatedPrice, updatedStatus, id]
+            'UPDATE products SET user_id = ?, name = ?, price = ? WHERE id = ?',
+            [updatedUserId, updatedName, updatedPrice, id]
         );
 
         let finalPhotos = [];
