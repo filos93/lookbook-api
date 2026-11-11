@@ -31,9 +31,19 @@ app.get('/{*splat}', (req, res, next) => {
 
 // Middleware Globale Gestione Errori (4 parametri)
 app.use((err, req, res, next) => {
-    console.error('❌ Errore Backend Uncaught:', err.stack || err.message);
-    res.status(err.status || 500).json({
-        error: err.message || 'Errore interno del server'
+    // Log completo dell'errore lato server per il debugging
+    console.error('❌ Errore Backend Uncaught:', err.stack || err);
+
+    // Evita di esporre dettagli interni del database o query SQL al client
+    const isProduction = process.env.NODE_ENV === 'production';
+    const statusCode = err.status || err.statusCode || 500;
+    
+    const clientMessage = isProduction && statusCode === 500
+        ? 'Errore interno del server'
+        : (err.message || 'Errore interno del server');
+
+    res.status(statusCode).json({
+        error: clientMessage
     });
 });
 

@@ -77,12 +77,15 @@ function validateAndSanitizeProduct(data, isUpdate = false) {
     };
 }
 
-// GET /api/products - Elenco prodotti con proprietario, foto e status
+// GET /api/products - Elenco prodotti con proprietario, foto (via JSON_ARRAYAGG) e status
 router.get('/', async (req, res) => {
     try {
         const [rows] = await pool.execute(`
             SELECT p.id, p.name, p.price, p.status, p.user_id, u.name AS owner_name, u.email AS owner_email,
-                   GROUP_CONCAT(pp.photo_url) AS photos
+                   COALESCE(
+                       JSON_ARRAYAGG(pp.photo_url), 
+                       JSON_ARRAY()
+                   ) AS photos
             FROM products p
             LEFT JOIN users u ON p.user_id = u.id
             LEFT JOIN product_photos pp ON p.id = pp.product_id
@@ -90,11 +93,27 @@ router.get('/', async (req, res) => {
             ORDER BY p.id ASC
         `);
 
-        const products = rows.map(p => ({
-            ...p,
-            status: p.status || 'available',
-            photos: p.photos ? p.photos.split(',') : []
-        }));
+        const products = rows.map(p => {
+            let parsedPhotos = [];
+            if (Array.isArray(p.photos)) {
+                parsedPhotos = p.photos;
+            } else if (typeof p.photos === 'string') {
+                try {
+                    parsedPhotos = JSON.parse(p.photos);
+                } catch {
+                    parsedPhotos = [];
+                }
+            }
+
+            // Filtra eventuali valori null generati dal LEFT JOIN quando non ci sono foto
+            parsedPhotos = parsedPhotos.filter(url => url !== null);
+
+            return {
+                ...p,
+                status: p.status || 'available',
+                photos: parsedPhotos
+            };
+        });
 
         res.json(products);
     } catch (error) {
