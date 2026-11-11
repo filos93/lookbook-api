@@ -68,7 +68,7 @@ async function validateSwapData(connection, userIds, productIds) {
 
 
 // GET /api/swaps - Elenco ordini swap (ottimizzato: risolto problema N+1 queries)
-router.get('/', async (req, res) => {
+router.get('/', async (req, res, next) => {
     try {
         const { date, startDate, endDate, productId } = req.query;
         let query = 'SELECT DISTINCT s.id, s.created_at FROM swap_orders s';
@@ -163,15 +163,17 @@ router.get('/', async (req, res) => {
 
         res.json(result);
     } catch (error) {
-        res.status(500).json({ error: 'Errore recupero ordini swap', details: error.message });
+        next(error);
     }
 });
 
 
 // POST /api/swaps - Creazione ordine swap
-router.post('/', async (req, res) => {
-    const connection = await pool.getConnection();
+router.post('/', async (req, res, next) => {
+    let connection;
     try {
+        connection = await pool.getConnection();
+
         // Supporta sia user_ids / product_ids che userIds / productIds
         const userIds = req.body.user_ids || req.body.userIds;
         const productIds = req.body.product_ids || req.body.productIds;
@@ -205,17 +207,16 @@ router.post('/', async (req, res) => {
         await connection.commit();
         res.status(201).json({ id: orderId, user_ids: cleanUserIds, product_ids: cleanProductIds });
     } catch (error) {
-        await connection.rollback();
-        console.error('Errore durante la creazione dello swap:', error);
-        res.status(500).json({ error: 'Errore creazione ordine swap', details: error.message });
+        if (connection) await connection.rollback();
+        next(error);
     } finally {
-        connection.release();
+        if (connection) connection.release();
     }
 });
 
 
 // PUT /api/swaps/:id - Modifica utenti o prodotti partecipanti allo swap (Validazione stringente e risposta reale da DB)
-router.put('/:id', async (req, res) => {
+router.put('/:id', async (req, res, next) => {
     const { id } = req.params;
     const userIds = req.body.user_ids || req.body.userIds;
     const productIds = req.body.product_ids || req.body.productIds;
@@ -227,9 +228,10 @@ router.put('/:id', async (req, res) => {
         });
     }
 
-    const connection = await pool.getConnection();
+    let connection;
 
     try {
+        connection = await pool.getConnection();
         await connection.beginTransaction();
 
         // 1. Verifica esistenza ordine swap (con lock della riga dell'ordine)
@@ -296,18 +298,19 @@ router.put('/:id', async (req, res) => {
             product_ids: savedProducts.map(p => p.product_id) 
         });
     } catch (error) {
-        await connection.rollback();
-        res.status(500).json({ error: 'Errore aggiornamento ordine swap', details: error.message });
+        if (connection) await connection.rollback();
+        next(error);
     } finally {
-        connection.release();
+        if (connection) connection.release();
     }
 });
 
 
 // DELETE /api/swaps/:id - Eliminazione ordine swap e ripristino stato prodotti a 'available'
-router.delete('/:id', async (req, res) => {
-    const connection = await pool.getConnection();
+router.delete('/:id', async (req, res, next) => {
+    let connection;
     try {
+        connection = await pool.getConnection();
         const { id } = req.params;
         await connection.beginTransaction();
 
@@ -338,11 +341,10 @@ router.delete('/:id', async (req, res) => {
         await connection.commit();
         res.json({ message: `Ordine swap #${id} eliminato con successo`, id: Number(id) });
     } catch (error) {
-        await connection.rollback();
-        console.error('Errore durante eliminazione swap:', error);
-        res.status(500).json({ error: 'Errore durante l\'eliminazione dello swap', details: error.message });
+        if (connection) await connection.rollback();
+        next(error);
     } finally {
-        connection.release();
+        if (connection) connection.release();
     }
 });
 

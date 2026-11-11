@@ -3,15 +3,15 @@
 ---
 
 ## 3. Security, Infrastructure & Configuration (Feedback 5-7)
-- [ ] **Sanitize Error Handling (`server.js` & Routes)**
-  - [ ] Delegate route-level `catch` blocks to the Express global error middleware via `next(err)`.
-  - [ ] Prevent raw MySQL driver errors (`details: error.message`) from leaking to the client; return clean generic messages while logging full traces server-side.
-- [ ] **Fix Product Photo Array Handling**
-  - [ ] Replace SQL `GROUP_CONCAT` and string `split(',')` with `JSON_ARRAYAGG` to avoid string truncation (1024-char limit) and comma-parsing bugs in image URLs.
-- [ ] **Harden Database Connection & Dependencies (`config/db.js`)**
-  - [ ] Configure explicit Aiven SSL CA certificate verification (`ca` option) instead of `rejectUnauthorized: false`.
-  - [ ] Remove default fallback credentials (`root` / `""`) to force fail-fast boot when `.env` configuration is missing.
-  - [ ] Remove unused `multer` dependency from `package.json`.
+- [X] **Sanitize Error Handling (`server.js` & Routes)**
+  - [X] Delegate route-level `catch` blocks to the Express global error middleware via `next(err)`.
+  - [X] Prevent raw MySQL driver errors (`details: error.message`) from leaking to the client; return clean generic messages while logging full traces server-side.
+- [X] **Fix Product Photo Array Handling**
+  - [X] Replace SQL `GROUP_CONCAT` and string `split(',')` with `JSON_ARRAYAGG` to avoid string truncation (1024-char limit) and comma-parsing bugs in image URLs.
+- [X] **Harden Database Connection & Dependencies (`config/db.js`)**
+  - [X] Configure explicit Aiven SSL CA certificate verification (`ca` option) instead of `rejectUnauthorized: false`.
+  - [X] Remove default fallback credentials (`root` / `""`) to force fail-fast boot when `.env` configuration is missing.
+  - [X] Remove unused `multer` dependency from `package.json`.
 
 ---
 

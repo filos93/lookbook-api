@@ -2,7 +2,6 @@ const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
 const fs = require('fs');
-// Verifica che il percorso di db.js sia corretto (es. './db' se nella stessa cartella, o '../config/db' se in config)
 const pool = require('./db');
 
 async function runSqlFile(connection, filePath) {
@@ -27,9 +26,15 @@ async function runSqlFile(connection, filePath) {
 async function initializeDatabase() {
   let connection;
   try {
-    const host = process.env.DB_HOST || 'localhost';
+    const host = process.env.DB_HOST;
     const port = process.env.DB_PORT || 3306;
-    const dbName = process.env.DB_NAME || 'defaultdb';
+    const dbName = process.env.DB_NAME;
+
+    if (!host || !dbName) {
+      console.error('❌ FATAL: DB_HOST o DB_NAME non definiti nel file .env.');
+      process.exit(1);
+    }
+
     console.log(`📡 Connessione al database su ${host}:${port} [DB: ${dbName}]...`);
 
     connection = await pool.getConnection();
@@ -63,10 +68,17 @@ async function initializeDatabase() {
     if (connection) {
       connection.release();
     }
-    // Chiude in modo pulito il pool di connessioni prima di terminare
     await pool.end();
-    process.exit(process.exitCode || 0);
   }
 }
 
-initializeDatabase();
+// Avvia l'inizializzazione solo se il file è eseguito direttamente da terminale
+if (require.main === module) {
+  initializeDatabase().then(() => {
+    if (process.exitCode === 1) {
+      process.exit(1);
+    }
+  });
+}
+
+module.exports = initializeDatabase;

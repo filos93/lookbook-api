@@ -78,7 +78,7 @@ function validateAndSanitizeProduct(data, isUpdate = false) {
 }
 
 // GET /api/products - Elenco prodotti con proprietario, foto (via JSON_ARRAYAGG) e status
-router.get('/', async (req, res) => {
+router.get('/', async (req, res, next) => {
     try {
         const [rows] = await pool.execute(`
             SELECT p.id, p.name, p.price, p.status, p.user_id, u.name AS owner_name, u.email AS owner_email,
@@ -117,24 +117,24 @@ router.get('/', async (req, res) => {
 
         res.json(products);
     } catch (error) {
-        res.status(500).json({ error: 'Errore recupero prodotti', details: error.message });
+        next(error);
     }
 });
 
 // POST /api/products - Creazione prodotto
-router.post('/', async (req, res) => {
+router.post('/', async (req, res, next) => {
     const { isValid, errors, cleanData } = validateAndSanitizeProduct(req.body, false);
     if (!isValid) {
         return res.status(400).json({ error: errors.join(' ') });
     }
 
-    const connection = await pool.getConnection();
+    let connection;
     try {
+        connection = await pool.getConnection();
         const { user_id, name, price, status, photos = [] } = cleanData;
 
         const [users] = await connection.execute('SELECT id FROM users WHERE id = ?', [user_id]);
         if (users.length === 0) {
-            connection.release();
             return res.status(404).json({ error: 'L\'utente specificato (user_id) non esiste.' });
         }
 
@@ -156,15 +156,15 @@ router.post('/', async (req, res) => {
         await connection.commit();
         res.status(201).json({ id: productId, user_id, name, price, status, photos });
     } catch (error) {
-        await connection.rollback();
-        res.status(500).json({ error: 'Errore inserimento prodotto', details: error.message });
+        if (connection) await connection.rollback();
+        next(error);
     } finally {
-        connection.release();
+        if (connection) connection.release();
     }
 });
 
 // PUT /api/products/:id - Modifica prodotto (status rimosso dai campi modificabili)
-router.put('/:id', async (req, res) => {
+router.put('/:id', async (req, res, next) => {
     const { id } = req.params;
     
     const { isValid, errors, cleanData } = validateAndSanitizeProduct(req.body, true);
@@ -172,8 +172,9 @@ router.put('/:id', async (req, res) => {
         return res.status(400).json({ error: errors.join(' ') });
     }
 
-    const connection = await pool.getConnection();
+    let connection;
     try {
+        connection = await pool.getConnection();
         await connection.beginTransaction();
 
         const [products] = await connection.execute('SELECT * FROM products WHERE id = ?', [id]);
@@ -237,19 +238,20 @@ router.put('/:id', async (req, res) => {
             photos: finalPhotos
         });
     } catch (error) {
-        await connection.rollback();
-        res.status(500).json({ error: 'Errore modifica prodotto', details: error.message });
+        if (connection) await connection.rollback();
+        next(error);
     } finally {
-        connection.release();
+        if (connection) connection.release();
     }
 });
 
 // DELETE /api/products/:id - Eliminazione singolo prodotto
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', async (req, res, next) => {
     const { id } = req.params;
-    const connection = await pool.getConnection();
+    let connection;
 
     try {
+        connection = await pool.getConnection();
         await connection.beginTransaction();
 
         const [products] = await connection.execute('SELECT id, status FROM products WHERE id = ?', [id]);
@@ -272,10 +274,10 @@ router.delete('/:id', async (req, res) => {
         await connection.commit();
         res.json({ message: 'Prodotto eliminato con successo', id: parseInt(id, 10) });
     } catch (error) {
-        await connection.rollback();
-        res.status(500).json({ error: 'Errore durante l\'eliminazione del prodotto', details: error.message });
+        if (connection) await connection.rollback();
+        next(error);
     } finally {
-        connection.release();
+        if (connection) connection.release();
     }
 });
 

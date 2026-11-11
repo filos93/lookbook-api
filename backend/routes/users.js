@@ -64,17 +64,17 @@ function validateAndSanitizeUser(data, isUpdate = false) {
 
 
 // GET /api/users - Elenco utenti in ordine di ID crescente
-router.get('/', async (req, res) => {
+router.get('/', async (req, res, next) => {
     try {
         const [rows] = await pool.execute('SELECT id, name, surname, email FROM users ORDER BY id ASC');
         res.json(rows);
     } catch (error) {
-        res.status(500).json({ error: 'Errore durante il recupero degli utenti', details: error.message });
+        next(error);
     }
 });
 
-// GET /api/users/:id - Dettaglio utente e relativi prodotti
-router.get('/:id', async (req, res) => {
+// GET /api/users/:id - Dettaglio utente e relativi prodotti (con JSON_ARRAYAGG per le foto)
+router.get('/:id', async (req, res, next) => {
     try {
         const { id } = req.params;
         const [users] = await pool.execute('SELECT id, name, surname, email FROM users WHERE id = ?', [id]);
@@ -84,7 +84,11 @@ router.get('/:id', async (req, res) => {
         }
 
         const [products] = await pool.execute(`
-            SELECT p.id, p.name, p.price, GROUP_CONCAT(pp.photo_url) AS photos
+            SELECT p.id, p.name, p.price,
+                   COALESCE(
+                       JSON_ARRAYAGG(pp.photo_url), 
+                       JSON_ARRAY()
+                   ) AS photos
             FROM products p
             LEFT JOIN product_photos pp ON p.id = pp.product_id
             WHERE p.user_id = ?
@@ -92,17 +96,36 @@ router.get('/:id', async (req, res) => {
             ORDER BY p.id ASC
         `, [id]);
 
+        const formattedProducts = products.map(p => {
+            let parsedPhotos = [];
+            if (Array.isArray(p.photos)) {
+                parsedPhotos = p.photos;
+            } else if (typeof p.photos === 'string') {
+                try {
+                    parsedPhotos = JSON.parse(p.photos);
+                } catch {
+                    parsedPhotos = [];
+                }
+            }
+            parsedPhotos = parsedPhotos.filter(url => url !== null);
+
+            return {
+                ...p,
+                photos: parsedPhotos
+            };
+        });
+
         res.json({
             ...users[0],
-            products: products.map(p => ({ ...p, photos: p.photos ? p.photos.split(',') : [] }))
+            products: formattedProducts
         });
     } catch (error) {
-        res.status(500).json({ error: 'Errore recupero dettagli utente', details: error.message });
+        next(error);
     }
 });
 
 // POST /api/users - Nuovo utente
-router.post('/', async (req, res) => {
+router.post('/', async (req, res, next) => {
     // 1. Validazione input
     const { isValid, errors, cleanData } = validateAndSanitizeUser(req.body, false);
     if (!isValid) {
@@ -122,16 +145,17 @@ router.post('/', async (req, res) => {
         if (error.code === 'ER_DUP_ENTRY') {
             return res.status(409).json({ error: 'Email già registrata' });
         }
-        res.status(500).json({ error: 'Errore durante la creazione dell\'utente', details: error.message });
+        next(error);
     }
 });
 
 // DELETE /api/users/:id - Eliminazione utente in cascata con pulizia swap
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', async (req, res, next) => {
     const { id } = req.params;
-    const connection = await pool.getConnection();
+    let connection;
 
     try {
+        connection = await pool.getConnection();
         await connection.beginTransaction();
 
         // 1. Verifica che l'utente esista
@@ -191,15 +215,15 @@ router.delete('/:id', async (req, res) => {
             message: `Utente #${id} eliminato. Gli swap a cui partecipava sono stati annullati e il valore totale ricalcolato.` 
         });
     } catch (error) {
-        await connection.rollback();
-        res.status(500).json({ error: 'Errore durante l\'eliminazione dell\'utente', details: error.message });
+        if (connection) await connection.rollback();
+        next(error);
     } finally {
-        connection.release();
+        if (connection) connection.release();
     }
 });
 
 // PUT /api/users/:id - Modifica dati utente
-router.put('/:id', async (req, res) => {
+router.put('/:id', async (req, res, next) => {
     try {
         const { id } = req.params;
 
@@ -236,7 +260,7 @@ router.put('/:id', async (req, res) => {
         if (error.code === 'ER_DUP_ENTRY') {
             return res.status(409).json({ error: 'Email già registrata da un altro utente' });
         }
-        res.status(500).json({ error: 'Errore durante l\'aggiornamento dell\'utente', details: error.message });
+        next(error);
     }
 });
 
