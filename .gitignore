@@ -1,9 +1,16 @@
 # Environment variables and secrets
 .env
+.env.*
+*.env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
+
+# Certificates, keys, and SSL local files
+backend/config/ca.pem
+config/ca.pem
+*.pem
 
 # Dependencies
 node_modules/
