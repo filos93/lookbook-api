@@ -9,13 +9,17 @@ function validateAndSanitizeProduct(data, isUpdate = false) {
 
     // 1. NOME PRODOTTO
     if (data.name !== undefined) {
-        const trimmedName = data.name.trim();
-        if (!trimmedName) {
-            errors.push('Il nome del prodotto non può essere vuoto.');
-        } else if (trimmedName.length < 2 || trimmedName.length > 100) {
-            errors.push('Il nome del prodotto deve essere compreso tra 2 e 100 caratteri.');
+        if (typeof data.name !== 'string') {
+            errors.push('Il nome del prodotto deve essere una stringa.');
+        } else {
+            const trimmedName = data.name.trim();
+            if (!trimmedName) {
+                errors.push('Il nome del prodotto non può essere vuoto.');
+            } else if (trimmedName.length < 2 || trimmedName.length > 100) {
+                errors.push('Il nome del prodotto deve essere compreso tra 2 e 100 caratteri.');
+            }
+            cleanData.name = trimmedName;
         }
-        cleanData.name = trimmedName;
     } else if (!isUpdate) {
         errors.push('Il campo name è obbligatorio.');
     }
@@ -89,7 +93,7 @@ router.get('/', async (req, res, next) => {
             FROM products p
             LEFT JOIN users u ON p.user_id = u.id
             LEFT JOIN product_photos pp ON p.id = pp.product_id
-            GROUP BY p.id
+            GROUP BY p.id, p.name, p.price, p.status, p.user_id, u.name, u.email
             ORDER BY p.id ASC
         `);
 
@@ -177,7 +181,7 @@ router.put('/:id', async (req, res, next) => {
         connection = await pool.getConnection();
         await connection.beginTransaction();
 
-        const [products] = await connection.execute('SELECT * FROM products WHERE id = ?', [id]);
+        const [products] = await connection.execute('SELECT * FROM products WHERE id = ? FOR UPDATE', [id]);
         if (products.length === 0) {
             await connection.rollback();
             return res.status(404).json({ error: 'Prodotto non trovato' });
@@ -254,7 +258,7 @@ router.delete('/:id', async (req, res, next) => {
         connection = await pool.getConnection();
         await connection.beginTransaction();
 
-        const [products] = await connection.execute('SELECT id, status FROM products WHERE id = ?', [id]);
+        const [products] = await connection.execute('SELECT id, status FROM products WHERE id = ? FOR UPDATE', [id]);
         if (products.length === 0) {
             await connection.rollback();
             return res.status(404).json({ error: 'Prodotto non trovato' });

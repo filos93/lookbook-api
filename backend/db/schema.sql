@@ -1,6 +1,3 @@
-CREATE DATABASE IF NOT EXISTS `defaultdb`;
-USE `defaultdb`;
-
 -- Drop existing tables in reverse dependency order
 DROP TABLE IF EXISTS swap_order_products;
 DROP TABLE IF EXISTS swap_order_users;

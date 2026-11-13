@@ -2,6 +2,17 @@
 
 [11/11/2026]
 
+## 3. Security, Infrastructure & Configuration (Feedback 5-7)
+- [X] **Sanitize Error Handling (`server.js` & Routes)**
+  - [X] Delegate route-level `catch` blocks to the Express global error middleware via `next(err)`.
+  - [X] Prevent raw MySQL driver errors (`details: error.message`) from leaking to the client; return clean generic messages while logging full traces server-side.
+- [X] **Fix Product Photo Array Handling**
+  - [X] Replace SQL `GROUP_CONCAT` and string `split(',')` with `JSON_ARRAYAGG` to avoid string truncation (1024-char limit) and comma-parsing bugs in image URLs.
+- [X] **Harden Database Connection & Dependencies (`config/db.js`)**
+  - [X] Configure explicit Aiven SSL CA certificate verification (`ca` option) instead of `rejectUnauthorized: false`.
+  - [X] Remove default fallback credentials (`root` / `""`) to force fail-fast boot when `.env` configuration is missing.
+  - [X] Remove unused `multer` dependency from `package.json`.
+
 ## 2. API Logic & Performance Optimizations (Feedback 3 & 4)
 - [x] **Eliminate N+1 Queries in `GET /api/swaps`**
   - [x] Replace per-order query loops ($2N+1$ queries) with batch queries using `WHERE order_id IN (...)` (or SQL `JOIN`s / `JSON_ARRAYAGG`).

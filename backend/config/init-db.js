@@ -1,5 +1,9 @@
 const path = require('path');
-require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
+require('dotenv').config({
+  path: process.env.NODE_ENV === 'test'
+    ? path.resolve(__dirname, '../.env.test')
+    : path.resolve(__dirname, '../.env')
+});
 
 const fs = require('fs');
 const pool = require('./db');

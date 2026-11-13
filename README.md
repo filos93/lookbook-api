@@ -14,7 +14,7 @@ LookBook is a full-stack web application and administrative management console f
 - **Backend:** Node.js, Express.js
 - **Database:** MySQL (`mysql2` with connection pooling, transaction isolation, and dynamic SSL for Aiven Cloud)
 - **Validation & Security:** Regex input sanitization, parameterized SQL statements, fail-safe environment configuration
-- **Testing & Quality:** Vitest (Frontend), Mocha / Vitest (Backend)
+- **Testing & Quality:** Vitest (Frontend), Mocha + Chai + Supertest live DB integration tests (Backend)
 
 ---
 
@@ -75,6 +75,7 @@ DB_HOST=your_aiven_host
 DB_PORT=your_aiven_port
 DB_USER=your_aiven_user
 DB_PASSWORD=your_aiven_password
+DB_SSL=REQUIRED
 DB_NAME=defaultdb
 ```
 
@@ -122,18 +123,18 @@ The React + Vite application will start on **http://localhost:5173**.
 
 | Method | Endpoint | Description |
 |----------|----------|----------|
-| GET | `/api/products` | List all products with owners and photos |
+| GET | `/api/products` | List all products with owners and aggregated photos (JSON_ARRAYAGG) |
 | POST | `/api/products` | Create a new item listing |
-| PUT | `/api/products/:id` | Update item details (blocked if status is `swapped`) |
-| DELETE | `/api/products/:id` | Remove product (blocked if involved in an active swap) |
+| PUT | `/api/products/:id` | Update item details (locks row FOR UPDATE, ignores manual status overrides, blocked if swapped) |
+| DELETE | `/api/products/:id` | Remove product (locks row FOR UPDATE, blocked if involved in an active swap) |
 
 ### 🔁 Swap Orders (`/api/swaps`)
 
 | Method | Endpoint | Description |
 |----------|----------|----------|
 | GET | `/api/swaps` | Fetch swap orders (supports filters: `date`, `startDate`, `endDate`, `productId`) |
-| POST | `/api/swaps` | Create atomic 2-user, 2-product swap (updates statuses to `swapped`) |
-| PUT | `/api/swaps/:id` | Update users or items involved in a swap |
+| POST | `/api/swaps` | Create atomic 2-user, 2-product swap with pessimistic row locks (FOR UPDATE) to prevent race conditions |
+| PUT | `/api/swaps/:id` | Atomically update users and items involved in a swap (requires complete user_ids and product_ids payload) |
 | DELETE | `/api/swaps/:id` | Delete swap order and restore item statuses to `available` |
 
 ---
@@ -142,10 +143,26 @@ The React + Vite application will start on **http://localhost:5173**.
 
 Run backend and frontend test suites and dependency security audits:
 
-### Backend
+### Backend Integration Tests (Live MySQL)
+
+Backend tests execute directly against a dedicated MySQL test database (lookbook_test) to verify real transactional behavior: concurrent swap race conditions (FOR UPDATE row locks), swapped item protection on product updates/deletes, status immutability, and strict payload validation on swap updates.
+
+1. Create an isolated .env.test file in backend/ with the same database connection credentials as .env and a separate test database name:
+
+```DB_HOST=your_aiven_host
+DB_PORT=your_aiven_port
+DB_USER=your_aiven_user
+DB_PASSWORD=your_aiven_password
+DB_NAME=lookbook_test
+DB_SSL=REQUIRED
+DB_SSL_CA="./config/ca.pem"
+```
+
+2. Initialize the schema on the test database and run the suite:
 
 ```bash
 cd backend
+NODE_ENV=test npm run init-db
 npm test
 npm audit
 ```
@@ -165,9 +182,9 @@ npm audit
 - Administrative inventory management
 - Peer-to-peer clothing exchange platform
 - Transactional swap processing
-- Automatic status synchronization
+- Automatic status synchronization and immutability guards
+- Batched query execution and SQL JSON_ARRAYAGG photo aggregation
 - Cascading user and product cleanup
-- Secure REST API design
-- MySQL connection pooling with Aiven Cloud support
-- Input validation and sanitization
-- Automated testing and dependency auditing
+- Verified SSL MySQL connection pooling with fail-fast startup validation
+- Input validation, sanitization, and centralized error handling
+- Live database integration testing and dependency auditing

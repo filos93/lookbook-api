@@ -1,32 +1,43 @@
 const mysql = require('mysql2/promise');
 const path = require('path');
 const fs = require('fs');
-require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
+
+const envFile = process.env.NODE_ENV === 'test' ? '../.env.test' : '../.env';
+require('dotenv').config({
+  path: path.resolve(__dirname, envFile),
+  override: process.env.NODE_ENV === 'test'
+});
 
 // 1. Fail-fast validation: Blocca l'avvio se manca la configurazione critica in .env
 if (!process.env.MYSQL_URL && (!process.env.DB_HOST || !process.env.DB_USER || !process.env.DB_NAME)) {
-  console.error('❌ FATAL: Configurazione Database mancante. Verifica che il file .env sia presente e configurato.');
+  console.error(`❌ FATAL: Configurazione Database mancante. Verifica che il file ${envFile} sia presente e configurato.`);
   process.exit(1);
 }
 
 const isAiven = process.env.DB_HOST && process.env.DB_HOST.includes('aivencloud.com');
 
-// Determina se abilitare SSL (richiesto da Aiven, disabilitato in locale)
-const useSSL = process.env.DB_SSL !== undefined 
-  ? process.env.DB_SSL === 'true' 
+// Determina se abilitare SSL (supporta sia 'true' che 'REQUIRED')
+const useSSL = process.env.DB_SSL !== undefined
+  ? ['true', 'REQUIRED'].includes(process.env.DB_SSL)
   : isAiven;
 
-// Configurazione opzioni SSL sicure per Aiven Cloud
+// Configurazione opzioni SSL sicure per Aiven Cloud (supporta sia percorso file che stringa PEM inline)
 let sslOption = false;
 
 if (useSSL) {
-  const caPath = path.resolve(__dirname, './ca.pem');
-  if (process.env.DB_SSL_CA) {
-    sslOption = { ca: process.env.DB_SSL_CA, rejectUnauthorized: true };
-  } else if (fs.existsSync(caPath)) {
-    sslOption = { ca: fs.readFileSync(caPath), rejectUnauthorized: true };
+  const defaultCaPath = path.resolve(__dirname, './ca.pem');
+  const caInput = process.env.DB_SSL_CA;
+
+  if (caInput) {
+    const resolvedCaPath = path.resolve(__dirname, '..', caInput);
+    const caContent = fs.existsSync(resolvedCaPath)
+      ? fs.readFileSync(resolvedCaPath)
+      : caInput.replace(/\\n/g, '\n');
+
+    sslOption = { ca: caContent, rejectUnauthorized: true };
+  } else if (fs.existsSync(defaultCaPath)) {
+    sslOption = { ca: fs.readFileSync(defaultCaPath), rejectUnauthorized: true };
   } else {
-    // Abilita la verifica standard del certificato se non viene fornito un CA custom
     sslOption = { rejectUnauthorized: true };
   }
 }
