@@ -1,5 +1,16 @@
 # 📜 Project Archive & Changelog
 
+[12/11/2026]
+
+## 4. Integration Testing (Feedback 8)
+- [X] **Add Database Integration Tests**
+  - [X] Write integration tests against a live test MySQL database (replacing pure `sinon` unit mocks).
+  - [X] Test concurrent swap requests targeting the same product (verify `FOR UPDATE` row lock behavior).
+  - [X] Test status protection on `PUT /api/products/:id`.
+  - [X] Test incomplete payload handling on `PUT /api/swaps/:id`.
+
+---
+
 [11/11/2026]
 
 ## 3. Security, Infrastructure & Configuration (Feedback 5-7)
