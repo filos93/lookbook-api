@@ -19,8 +19,24 @@ describe('Swap Studio - Frontend Integration Tests', () => {
   ];
 
   const mockProducts = [
-    { id: 10, name: 'Giacca Vintage', price: '120.00', status: 'swapped', user_id: 1, owner_name: 'Mario Rossi' },
-    { id: 12, name: 'T-Shirt Silk', price: '50.00', status: 'available', user_id: 2, owner_name: 'Giulia Bianchi' },
+    {
+      id: 10,
+      name: 'Giacca Vintage',
+      price: '120.00',
+      status: 'swapped',
+      user_id: 1,
+      owner_name: 'Mario Rossi',
+      photos: ['https://example.com/giacca.jpg'],
+    },
+    {
+      id: 12,
+      name: 'T-Shirt Silk',
+      price: '50.00',
+      status: 'available',
+      user_id: 2,
+      owner_name: 'Giulia Bianchi',
+      photos: [],
+    },
   ];
 
   const mockSwaps = [
@@ -40,6 +56,7 @@ describe('Swap Studio - Frontend Integration Tests', () => {
     apiClient.fetchProducts.mockResolvedValue(mockProducts);
     apiClient.fetchSwaps.mockResolvedValue(mockSwaps);
     apiClient.deleteSwap.mockResolvedValue({ success: true });
+    apiClient.createSwap.mockResolvedValue({ id: 5, message: 'Ordine swap creato con successo' });
   });
 
   // 1. Rendering Active Swaps
@@ -55,7 +72,7 @@ describe('Swap Studio - Frontend Integration Tests', () => {
     await user.click(activeSwapsTab);
 
     expect(await screen.findByText(/#SWAP-0004/i)).toBeInTheDocument();
-    
+
     const priceElements = screen.getAllByText(/170\.00/i);
     expect(priceElements.length).toBeGreaterThan(0);
   });
@@ -97,7 +114,6 @@ describe('Swap Studio - Frontend Integration Tests', () => {
     const newSwapBtn = screen.getByRole('button', { name: /Nuovo Swap/i });
     await user.click(newSwapBtn);
 
-    // Usa findAllByText per catturare tutte le istanze del capo presente nel DOM
     const swappedItems = await screen.findAllByText('Giacca Vintage');
     expect(swappedItems.length).toBeGreaterThan(0);
 
@@ -108,5 +124,53 @@ describe('Swap Studio - Frontend Integration Tests', () => {
 
     const submitBtn = screen.getByRole('button', { name: /Conferma Ordine Swap/i });
     expect(submitBtn).toBeDisabled();
+  });
+
+  // 4. Gestione errore di concorrenza dal backend (400 Conflict)
+  test('Mostra un messaggio di errore se createSwap viene rifiutato per concorrenza dal backend', async () => {
+    const user = userEvent.setup();
+
+    apiClient.fetchProducts.mockResolvedValueOnce([
+      {
+        id: 10,
+        name: 'Giacca Vintage',
+        price: '120.00',
+        status: 'available',
+        user_id: 1,
+        owner_name: 'Mario Rossi',
+        photos: [],
+      },
+      {
+        id: 12,
+        name: 'T-Shirt Silk',
+        price: '50.00',
+        status: 'available',
+        user_id: 2,
+        owner_name: 'Giulia Bianchi',
+        photos: [],
+      },
+    ]);
+
+    apiClient.createSwap.mockRejectedValueOnce(
+      new Error('Uno o più prodotti selezionati non sono più disponibili')
+    );
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.queryByText(/Caricamento Swap Studio/i)).not.toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole('button', { name: /Nuovo Swap/i }));
+
+    const item1Card = (await screen.findAllByText('Giacca Vintage'))[0].closest('div');
+    const item2Card = (await screen.findAllByText('T-Shirt Silk'))[0].closest('div');
+    if (item1Card) await user.click(item1Card);
+    if (item2Card) await user.click(item2Card);
+
+    const submitBtn = screen.getByRole('button', { name: /Conferma Ordine Swap/i });
+    await user.click(submitBtn);
+
+    expect(await screen.findByText(/non sono più disponibili/i)).toBeInTheDocument();
   });
 });

@@ -167,7 +167,9 @@ npm test
 npm audit
 ```
 
-### Frontend
+### Frontend Unit & Component Tests
+
+Runs in-memory with Vitest and React Testing Library (no live database connection required):
 
 ```bash
 cd ../frontend
