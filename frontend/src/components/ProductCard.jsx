@@ -1,7 +1,11 @@
+import { useState } from 'react';
+
 export default function ProductCard({ product, onDelete, onEdit, onSwapClick }) {
+  const [imgError, setImgError] = useState(false);
+
   if (!product) return null;
 
-  const { id, name, price, owner_name, photos, status = 'available' } = product;
+  const { name, price, owner_name, photos, status = 'available' } = product;
 
   const isSwapped = status === 'swapped';
 
@@ -18,8 +22,8 @@ export default function ProductCard({ product, onDelete, onEdit, onSwapClick }) 
   }
 
   const coverImage = photoList && photoList.length > 0 && photoList[0]
-    ? photoList[0] 
-    : 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?auto=format&fit=crop&q=80&w=600';
+    ? photoList[0]
+    : null;
 
   return (
     <div className={`bg-[#121624] border border-[#1f263e] rounded-xl overflow-hidden shadow-lg flex flex-col justify-between group transition relative ${
@@ -64,16 +68,33 @@ export default function ProductCard({ product, onDelete, onEdit, onSwapClick }) 
             €{Number(price || 0).toFixed(2)}
           </span>
 
-          <img
-            src={coverImage}
-            alt={name || 'Capo LookBook'}
-            className={`w-full h-full object-cover transition duration-300 ${
-              isSwapped ? 'filter grayscale-[30%]' : 'group-hover:scale-105'
-            }`}
-            onError={(e) => {
-              e.target.src = 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?auto=format&fit=crop&q=80&w=600';
-            }}
-          />
+          {coverImage && !imgError ? (
+            <img
+              src={coverImage}
+              alt={name || 'Capo LookBook'}
+              className={`w-full h-full object-cover transition duration-300 ${
+                isSwapped ? 'filter grayscale-[30%]' : 'group-hover:scale-105'
+              }`}
+              onError={() => setImgError(true)}
+            />
+          ) : (
+            <div className="w-full h-full flex flex-col items-center justify-center text-gray-500 select-none">
+              <svg
+                className="w-10 h-10 mb-2 opacity-40"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.5}
+                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                />
+              </svg>
+              <span className="text-xs font-medium tracking-wide">Nessuna foto</span>
+            </div>
+          )}
         </div>
 
         {/* Dettagli Prodotto */}
