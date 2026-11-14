@@ -56,7 +56,7 @@ export default function EditSwapModal({ isOpen, onClose, swap, users = [], produ
     });
   };
 
-  // Gestione selezione capi: consentiti solo capi appartenenti agli utenti selezionati
+  // Gestione selezione capi: consentiti solo 1 capo per ciascun partecipante selezionato
   const toggleProduct = (product) => {
     const ownerId = getProductOwnerId(product);
 
@@ -73,6 +73,17 @@ export default function EditSwapModal({ isOpen, onClose, swap, users = [], produ
 
       if (prev.length >= 2) {
         setError('Puoi selezionare al massimo 2 capi.');
+        return prev;
+      }
+
+      // Impedisce di selezionare un secondo capo dello stesso utente del primo
+      const alreadySelectedOwners = prev
+        .map(pId => products.find(p => p.id === pId))
+        .filter(Boolean)
+        .map(p => getProductOwnerId(p));
+
+      if (alreadySelectedOwners.includes(ownerId)) {
+        setError('Hai già selezionato un capo di questo utente. Seleziona un capo dell\'altro partecipante.');
         return prev;
       }
 
@@ -200,15 +211,27 @@ export default function EditSwapModal({ isOpen, onClose, swap, users = [], produ
               ) : (
                 availableProducts.map(p => {
                   const isSelected = selectedProductIds.includes(p.id);
-                  const owner = users.find(u => u.id === getProductOwnerId(p));
+                  const ownerId = getProductOwnerId(p);
+                  const owner = users.find(u => u.id === ownerId);
+
+                  // Disabilita gli altri capi dello stesso utente se ha già 1 capo selezionato
+                  const isOwnerAlreadyRepresented =
+                    !isSelected &&
+                    selectedProductIds.some(selId => {
+                      const selProd = products.find(item => item.id === selId);
+                      return selProd && getProductOwnerId(selProd) === ownerId;
+                    });
+
                   return (
                     <div 
                       key={p.id}
-                      onClick={() => toggleProduct(p)}
-                      className={`p-2 rounded-lg cursor-pointer text-xs flex justify-between items-center border transition ${
+                      onClick={() => !isOwnerAlreadyRepresented && toggleProduct(p)}
+                      className={`p-2 rounded-lg text-xs flex justify-between items-center border transition ${
                         isSelected 
-                          ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-300' 
-                          : 'border-transparent text-gray-400 hover:bg-[#121624]'
+                          ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-300 cursor-pointer' 
+                          : isOwnerAlreadyRepresented
+                            ? 'border-transparent text-gray-600 opacity-40 cursor-not-allowed'
+                            : 'border-transparent text-gray-400 hover:bg-[#121624] cursor-pointer'
                       }`}
                     >
                       <div className="flex flex-col">

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 export default function ProductCard({ product, onDelete, onEdit, onSwapClick }) {
-  const [imgError, setImgError] = useState(false);
+  const [failedUrl, setFailedUrl] = useState(null);
 
   if (!product) return null;
 
@@ -68,14 +68,14 @@ export default function ProductCard({ product, onDelete, onEdit, onSwapClick }) 
             €{Number(price || 0).toFixed(2)}
           </span>
 
-          {coverImage && !imgError ? (
+          {coverImage && failedUrl !== coverImage ? (
             <img
               src={coverImage}
               alt={name || 'Capo LookBook'}
               className={`w-full h-full object-cover transition duration-300 ${
                 isSwapped ? 'filter grayscale-[30%]' : 'group-hover:scale-105'
               }`}
-              onError={() => setImgError(true)}
+              onError={() => setFailedUrl(coverImage)}
             />
           ) : (
             <div className="w-full h-full flex flex-col items-center justify-center text-gray-500 select-none">

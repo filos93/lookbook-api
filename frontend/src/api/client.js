@@ -9,14 +9,20 @@ async function handleResponse(res, fallbackErrorMsg) {
     } catch {
       // Se la risposta non è un JSON valido
     }
-    // Estrae error, details o message
     const message = errorData?.error 
       ? (errorData.details ? `${errorData.error}: ${errorData.details}` : errorData.error)
       : (errorData?.message || fallbackErrorMsg);
       
     throw new Error(message);
   }
-  return res.json();
+
+  if (res.status === 204) return null;
+
+  try {
+    return await res.json();
+  } catch {
+    throw new Error(fallbackErrorMsg);
+  }
 }
 
 // --- USERS ---

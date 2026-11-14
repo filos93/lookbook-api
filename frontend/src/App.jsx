@@ -44,6 +44,11 @@ export default function App() {
   const [deletingProduct, setDeletingProduct] = useState(null);
   const [deletingSwap, setDeletingSwap] = useState(null);
 
+  // Mantiene sempre sincronizzato il prodotto pre-selezionato con lo stato reale del catalogo
+  const activePreselectedProduct = preselectedProduct
+    ? products.find((p) => p.id === preselectedProduct.id && p.status !== 'swapped') || null
+    : null;
+
   const totalSwappedValue = swaps.reduce((acc, s) => acc + Number(s.total_gross_value || 0), 0);
 
   const filteredProducts = products.filter((p) => {
@@ -98,7 +103,7 @@ export default function App() {
             </button>
             <SwapRecord 
               products={products} 
-              preselectedProduct={preselectedProduct}
+              preselectedProduct={activePreselectedProduct}
               onCreateSwap={async (payload) => {
                 await handleCreateSwap(payload);
                 setShowSwapBuilder(false);
@@ -207,8 +212,24 @@ export default function App() {
       {editingSwap && <EditSwapModal isOpen={!!editingSwap} swap={editingSwap} users={users} products={products} onClose={() => setEditingSwap(null)} onSave={async (id, data) => { await handleUpdateSwap(id, data); setEditingSwap(null); }} />}
 
       {/* Modals Eliminazione */}
-      <DeleteUserModal user={deletingUser} onClose={() => setDeletingUser(null)} onConfirm={async (u) => { await handleConfirmDeleteUser(u.id); setDeletingUser(null); }} />
-      <DeleteProductModal product={deletingProduct} onClose={() => setDeletingProduct(null)} onConfirm={async (p) => { await handleConfirmDeleteProduct(p.id); setDeletingProduct(null); }} />
+      <DeleteUserModal
+        user={deletingUser}
+        onClose={() => setDeletingUser(null)}
+        onConfirm={async (u) => {
+          await handleConfirmDeleteUser(u.id);
+          if (preselectedProduct?.user_id === u.id) setPreselectedProduct(null);
+          setDeletingUser(null);
+        }}
+      />
+      <DeleteProductModal
+        product={deletingProduct}
+        onClose={() => setDeletingProduct(null)}
+        onConfirm={async (p) => {
+          await handleConfirmDeleteProduct(p.id);
+          if (preselectedProduct?.id === p.id) setPreselectedProduct(null);
+          setDeletingProduct(null);
+        }}
+      />
       <DeleteSwapModal swap={deletingSwap} onClose={() => setDeletingSwap(null)} onConfirm={async (s) => { await handleConfirmDeleteSwap(s.id); setDeletingSwap(null); }} />
     </div>
   );
