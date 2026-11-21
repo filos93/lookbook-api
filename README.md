@@ -1,6 +1,8 @@
 # LookBook API (Swap Studio)
 
-RESTful backend service for **LookBook (Swap Studio)**, a peer-to-peer clothing exchange and administrative inventory management platform. Built with Node.js, Express 5, and MySQL (Aiven Cloud or local), it enforces transactional swap processing, pessimistic concurrency locking (`FOR UPDATE`), automated item status synchronization, cascading data cleanup, and strict input validation.
+RESTful backend service powering **LookBook (Swap Studio)**, a peer-to-peer clothing exchange and inventory management platform.
+
+Built with **Node.js**, **Express 5**, and **MySQL**, the API provides secure and transactional management of users, garments, and swap operations. The application implements pessimistic locking (`FOR UPDATE`), automated inventory status synchronization, cascading cleanup operations, centralized validation, and integration testing against a real MySQL database.
 
 > **Frontend Repository:** Looking for the React + Vite client application? Check out [lookbook-frontend](https://github.com/filos93/lookbook-frontend).
 
@@ -8,10 +10,58 @@ RESTful backend service for **LookBook (Swap Studio)**, a peer-to-peer clothing 
 
 ## 🚀 Tech Stack
 
-- **Runtime & Framework:** Node.js, Express 5 (`express`, `cors`, `dotenv`)
-- **Database:** MySQL (`mysql2/promise` with connection pooling, transaction isolation, and dynamic SSL CA verification for Aiven Cloud)
-- **Validation & Security:** Regex input sanitization, parameterized SQL queries, fail-fast startup validation, centralized error sanitization
-- **Testing & Quality:** Mocha, Chai, and Supertest live MySQL integration test suite
+### Backend
+
+- Node.js
+- Express 5
+- CORS
+- dotenv
+
+### Database
+
+- MySQL (`mysql2/promise`)
+- Connection pooling
+- Transactions
+- Row-level locking (`FOR UPDATE`)
+- Aiven Cloud MySQL support
+- SSL certificate validation
+
+### Testing
+
+- Mocha
+- Chai
+- Supertest
+
+### Security & Validation
+
+- Parameterized SQL queries
+- Input validation
+- Regex-based sanitization
+- Centralized error handling
+- Fail-fast environment validation
+
+---
+
+## 🏗️ Architecture
+
+```text
+┌─────────────────────────────┐
+│ React Frontend (Vite)       │
+│ lookbook-frontend           │
+└──────────────┬──────────────┘
+               │ REST API
+               ▼
+┌─────────────────────────────┐
+│ Express 5 API              │
+│ Node.js Backend            │
+└──────────────┬──────────────┘
+               │
+               ▼
+┌─────────────────────────────┐
+│ MySQL Database             │
+│ Aiven Cloud / Local        │
+└─────────────────────────────┘
+```
 
 ---
 
@@ -20,23 +70,35 @@ RESTful backend service for **LookBook (Swap Studio)**, a peer-to-peer clothing 
 ```text
 lookbook-api/
 ├── config/
-│   ├── db.js            # MySQL connection pool, SSL CA setup, and fail-fast env validation
-│   └── init-db.js       # Database schema & seed initialization script with production guard
+│   ├── db.js
+│   └── init-db.js
 ├── db/
-│   ├── schema.sql       # Relational tables, foreign keys, and indexes
-│   └── seeds.sql        # Initial sample users, products, photos, and swaps
+│   ├── schema.sql
+│   └── seeds.sql
 ├── routes/
-│   ├── products.js      # Product CRUD, JSON_ARRAYAGG photos, and status immutability guards
-│   ├── swap_orders.js   # Atomic swap creation/update/deletion with FOR UPDATE row locks
-│   └── users.js         # User CRUD and cascading swap/product cleanup
+│   ├── users.js
+│   ├── products.js
+│   └── swap_orders.js
 ├── tests/
-│   └── swap_orders.tests.js # Live MySQL integration tests (concurrency, locks, validation)
-├── .env.example         # Environment variable template
-├── .gitignore           # Git untracked rules
-├── package.json         # Dependencies and npm scripts
-├── README.md            # Repository documentation & setup guide
-└── server.js            # Express application entry point & global middleware
+│   └── swap_orders.tests.js
+├── .env.example
+├── .gitignore
+├── package.json
+├── README.md
+└── server.js
 ```
+
+### Key Components
+
+| Component | Purpose |
+|------------|------------|
+| `config/db.js` | MySQL connection pool and SSL configuration |
+| `config/init-db.js` | Database initialization and seed loading |
+| `routes/users.js` | User CRUD operations |
+| `routes/products.js` | Product CRUD operations and status validation |
+| `routes/swap_orders.js` | Transactional swap management |
+| `tests/swap_orders.tests.js` | Integration tests for locking, validation, and transactions |
+| `server.js` | Express application entry point |
 
 ---
 
@@ -44,115 +106,328 @@ lookbook-api/
 
 ### 1. Requirements
 
-- Node.js (v18+ recommended)
-- MySQL (local instance or Aiven Cloud MySQL URI)
+- Node.js 18+ (recommended)
+- MySQL server (local or cloud-hosted)
 
-### 2. Environment Configuration
+### 2. Clone the Repository
 
-Copy .env.example to .env in the repository root and configure your database and CORS settings:
+```bash
+git clone https://github.com/filos93/lookbook-api.git
+
+cd lookbook-api
+```
+
+### 3. Install Dependencies
+
+```bash
+npm install
+```
+
+### 4. Configure Environment Variables
+
+Create a `.env` file from the provided template:
 
 ```bash
 cp .env.example .env
 ```
 
+Example configuration:
+
 ```env
 PORT=3000
 CORS_ORIGIN=http://localhost:5173
+
 NODE_ENV=development
 
-# Aiven Cloud MySQL (Default)
-DB_HOST=your_aiven_host
-DB_PORT=your_aiven_port
-DB_USER=your_aiven_user
-DB_PASSWORD=your_aiven_password
+DB_HOST=your_host
+DB_PORT=3306
+DB_USER=your_user
+DB_PASSWORD=your_password
 DB_NAME=defaultdb
+
 DB_SSL=REQUIRED
-DB_SSL_CA="./config/ca.pem"
+DB_SSL_CA=./config/ca.pem
 ```
 
-### 3. Installation, Database Setup & Server Start
+### 5. Initialize the Database
 
 ```bash
-# Install dependencies
-npm install
-
-# Initialize schema and seed data
 npm run init-db
+```
 
-# Start development server (with auto-reload)
+This command:
+
+- Creates database tables
+- Adds indexes and constraints
+- Loads sample data
+
+### 6. Start the Server
+
+Development mode:
+
+```bash
 npm run dev
+```
 
-# Or start in standard mode
+Production mode:
+
+```bash
 npm start
 ```
 
-The Express API server will run on http://localhost:3000 (GET / returns a JSON health check).
+The API will be available at:
+
+```text
+http://localhost:3000
+```
+
+---
+
+## 🔍 Health Check
+
+Verify the API is running:
+
+```http
+GET /
+```
+
+Example response:
+
+```json
+{
+  "message": "LookBook API is running"
+}
+```
 
 ---
 
 ## 🔌 API Endpoints
 
-### 👤 Users (`/api/users`)
+### 👤 Users
+
+Base route:
+
+```text
+/api/users
+```
 
 | Method | Endpoint | Description |
 |----------|----------|----------|
-| GET | `/api/users` | Get all users |
-| GET | `/api/users/:id` | Get user details and listed products |
-| POST | `/api/users` | Register a new user (validates name, surname, unique email) |
-| PUT | `/api/users/:id` | Update user details |
-| DELETE | `/api/users/:id` | Cascading delete user (cancels active swaps and restores item statuses) |
-
-### 🧥 Products (`/api/products`)
-
-| Method | Endpoint | Description |
-|----------|----------|----------|
-| GET | `/api/products` | List all products with owners and aggregated photos (JSON_ARRAYAGG) |
-| POST | `/api/products` | Create a new item listing |
-| PUT | `/api/products/:id` | Update item details (locks row FOR UPDATE, ignores manual status overrides, blocked if swapped) |
-| DELETE | `/api/products/:id` | Remove product (locks row FOR UPDATE, blocked if involved in an active swap) |
-
-### 🔁 Swap Orders (`/api/swaps`)
-
-| Method | Endpoint | Description |
-|----------|----------|----------|
-| GET | `/api/swaps` | Fetch swap orders (supports filters: `date`, `startDate`, `endDate`, `productId`) |
-| POST | `/api/swaps` | Create atomic 2-user, 2-product swap with pessimistic row locks (FOR UPDATE) to prevent race conditions |
-| PUT | `/api/swaps/:id` | Atomically update users and items involved in a swap (requires complete user_ids and product_ids payload) |
-| DELETE | `/api/swaps/:id` | Delete swap order and restore item statuses to `available` |
+| GET | `/api/users` | Retrieve all users |
+| GET | `/api/users/:id` | Retrieve user details and owned products |
+| POST | `/api/users` | Create a new user |
+| PUT | `/api/users/:id` | Update user information |
+| DELETE | `/api/users/:id` | Delete a user and clean related records |
 
 ---
 
-## 🧪 Testing & Security Audits
+### 🧥 Products
 
-Integration tests execute directly against a dedicated MySQL test database (lookbook_test) to verify real transactional behavior: concurrent swap race conditions (FOR UPDATE row locks), swapped item protection on product updates/deletes, 400 Bad Request rejection on manual status overrides, and strict payload validation on swap updates.
+Base route:
 
-1. Create an isolated .env.test file in the repository root with the same connection credentials as .env and a separate test database name:
-
+```text
+/api/products
 ```
-DB_HOST=your_aiven_host
-DB_PORT=your_aiven_port
-DB_USER=your_aiven_user
-DB_PASSWORD=your_aiven_password
+
+| Method | Endpoint | Description |
+|----------|----------|----------|
+| GET | `/api/products` | Retrieve products with owners and photos |
+| POST | `/api/products` | Create a new product |
+| PUT | `/api/products/:id` | Update product details |
+| DELETE | `/api/products/:id` | Delete an available product |
+
+---
+
+### 🔁 Swaps
+
+Base route:
+
+```text
+/api/swaps
+```
+
+| Method | Endpoint | Description |
+|----------|----------|----------|
+| GET | `/api/swaps` | Retrieve swaps with optional filters |
+| POST | `/api/swaps` | Create a new swap |
+| PUT | `/api/swaps/:id` | Update swap participants and products |
+| DELETE | `/api/swaps/:id` | Delete a swap and restore product availability |
+
+---
+
+## 📦 Example Request
+
+Create a swap between two users:
+
+### Request
+
+```http
+POST /api/swaps
+Content-Type: application/json
+```
+
+```json
+{
+  "user1_id": 1,
+  "user2_id": 2,
+  "product1_id": 3,
+  "product2_id": 7
+}
+```
+
+### Response
+
+```json
+{
+  "message": "Swap created successfully",
+  "swapId": 15
+}
+```
+
+---
+
+## 🔒 Business Rules
+
+The API enforces several consistency rules:
+
+### Product Status
+
+Product status cannot be edited directly.
+
+Status is automatically managed based on swap lifecycle events:
+
+| Event | Result |
+|---------|---------|
+| Product created | `available` |
+| Swap created | `swapped` |
+| Swap updated | Status recalculated automatically |
+| Swap deleted | `available` |
+
+---
+
+### Swap Validation
+
+The API rejects swaps when:
+
+- Both products belong to the same user
+- A product is already swapped
+- Products do not exist
+- Users do not exist
+- Required IDs are missing
+- Invalid payload values are supplied
+
+---
+
+### Concurrency Protection
+
+Swap operations use database transactions and pessimistic locking:
+
+```sql
+SELECT ...
+FOR UPDATE
+```
+
+This prevents race conditions where multiple requests attempt to swap the same garment simultaneously.
+
+---
+
+## 🧪 Testing
+
+Integration tests run against a dedicated test database.
+
+### Test Environment
+
+Create a separate `.env.test` file:
+
+```env
+DB_HOST=your_host
+DB_PORT=3306
+DB_USER=your_user
+DB_PASSWORD=your_password
 DB_NAME=lookbook_test
+
 DB_SSL=REQUIRED
-DB_SSL_CA="./config/ca.pem"
+DB_SSL_CA=./config/ca.pem
 ```
 
-2. Initialize the schema on the test database and run the test suite:
+### Initialize Test Database
 
 ```bash
 NODE_ENV=test npm run init-db
+```
+
+### Run Tests
+
+```bash
 npm test
+```
+
+### Security Audit
+
+```bash
 npm audit
 ```
 
+---
+
 ## ✅ Core Features
 
-- **RESTful API Architecture:** Decoupled backend service with configurable CORS (`CORS_ORIGIN`), JSON health check (`GET /`), and standardized JSON error responses
-- **Transactional Swap Processing:** Atomic 2-user, 2-product swap creation, updates, and deletions protected by pessimistic row locking (`SELECT ... FOR UPDATE`)
-- **Strict Status Immutability Guards:** Item `status` (`available` / `swapped`) is derived exclusively from swap lifecycle events; manual overrides via `PUT /api/products/:id` are explicitly rejected (`400 Bad Request`)
-- **Batched Query Execution & SQL Aggregation:** Eliminates N+1 query bottlenecks on swap retrieval and aggregates product photos via SQL `JSON_ARRAYAGG`
-- **Cascading Data Cleanup:** Deleting a user atomically cancels active swaps, removes owned items, and restores counterparty products to `available`
-- **Verified SSL Connection Pooling:** MySQL (`mysql2/promise`) pool with Aiven SSL CA certificate verification and fail-fast startup environment validation
-- **Input Validation & Error Sanitization:** Regex input sanitization, parameterized SQL queries, and centralized Express error middleware preventing internal DB leaks
-- **Live MySQL Integration Testing:** Automated Mocha, Chai, and Supertest suite verifying concurrency, row locks, and validation rules against an isolated test database
+### Transactional Swap Engine
+
+Swap creation, updates, and deletions execute inside MySQL transactions to ensure consistency and rollback safety.
+
+### Pessimistic Locking
+
+Uses `SELECT ... FOR UPDATE` to prevent concurrent modifications of the same products.
+
+### Status Synchronization
+
+Product availability is derived automatically from swap activity and cannot be manually overridden.
+
+### Cascading Cleanup
+
+Deleting a user automatically:
+
+- Removes owned products
+- Resolves associated swaps
+- Restores affected product availability
+
+### Efficient Data Retrieval
+
+Uses SQL aggregation (`JSON_ARRAYAGG`) and optimized queries to minimize database round-trips.
+
+### Secure Database Access
+
+Supports both local MySQL and Aiven Cloud deployments with SSL certificate validation.
+
+### Input Validation
+
+Validates emails, names, prices, identifiers, and business rules before processing requests.
+
+### Centralized Error Handling
+
+Returns consistent JSON responses while preventing exposure of internal database details.
+
+### Automated Integration Testing
+
+Mocha, Chai, and Supertest verify:
+
+- Swap transactions
+- Concurrency protection
+- Validation rules
+- Status immutability
+- API response behavior
+
+---
+
+## 🔗 Related Repository
+
+Frontend Application:
+
+- [lookbook-frontend](https://github.com/filos93/lookbook-frontend)
+
+---
+
+## 📄 License
+
+This project is released under the MIT License.
