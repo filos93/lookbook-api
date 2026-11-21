@@ -1,20 +1,17 @@
-<p>
-  <img src="./frontend/src/assets/logo.png" alt="LookBook Logo" width="20%" />
-</p>
+# LookBook API (Swap Studio)
 
-# LookBook (Swap Studio)
+RESTful backend service for **LookBook (Swap Studio)**, a peer-to-peer clothing exchange and administrative inventory management platform. Built with Node.js, Express 5, and MySQL (Aiven Cloud or local), it enforces transactional swap processing, pessimistic concurrency locking (`FOR UPDATE`), automated item status synchronization, cascading data cleanup, and strict input validation.
 
-LookBook is a full-stack web application and administrative management console for peer-to-peer clothing swaps and inventory control. Built with a modern React frontend and a robust Node.js/Express REST API backed by MySQL (Aiven Cloud or local), it features transactional swap management, dynamic photo handling, cascading data cleanup, and strict input validation.
+> **Frontend Repository:** Looking for the React + Vite client application? Check out [lookbook-frontend](https://github.com/filos93/lookbook-frontend).
 
 ---
 
 ## 🚀 Tech Stack
 
-- **Frontend:** React, Vite, Tailwind CSS
-- **Backend:** Node.js, Express.js
-- **Database:** MySQL (`mysql2` with connection pooling, transaction isolation, and dynamic SSL for Aiven Cloud)
-- **Validation & Security:** Regex input sanitization, parameterized SQL statements, fail-safe environment configuration
-- **Testing & Quality:** Vitest (Frontend), Mocha + Chai + Supertest live DB integration tests (Backend)
+- **Runtime & Framework:** Node.js, Express 5 (`express`, `cors`, `dotenv`)
+- **Database:** MySQL (`mysql2/promise` with connection pooling, transaction isolation, and dynamic SSL CA verification for Aiven Cloud)
+- **Validation & Security:** Regex input sanitization, parameterized SQL queries, fail-fast startup validation, centralized error sanitization
+- **Testing & Quality:** Mocha, Chai, and Supertest live MySQL integration test suite
 
 ---
 
@@ -22,28 +19,23 @@ LookBook is a full-stack web application and administrative management console f
 
 ```text
 lookbook-api/
-├── backend/
-│   ├── config/          # Database configuration plus initialization (db.js, init-db.js)
-│   ├── db/              # SQL schema and seeds (schema.sql, seeds.sql)
-│   ├── routes/          # Express API routes (users.js, products.js, swap_orders.js)
-│   ├── .env.example     # Backend environment template
-│   └── server.js        # Entry point
-├── docs/                # Project overview, TODO list, and project archive documentation
-├── frontend/
-│   ├── src/
-│   │   ├── api/         # Centralized API service methods & HTTP requests
-│   │   ├── assets/      # Static visual resources, icons, and media
-│   │   ├── components/  # Modular & reusable React UI components
-│   │   ├── hooks/       # Custom React hooks for business logic & state
-│   │   ├── App.jsx      # Main application router/layout entry point
-│   │   ├── main.jsx     # Vite React DOM root renderer
-│   │   └── index.css    # Global styles & Tailwind CSS imports
-│   ├── index.html       # Single-Page Application entry point HTML
-│   ├── postcss.config.js# PostCSS plugin configuration
-│   ├── tailwind.config.js# Tailwind CSS framework settings
-│   └── vite.config.js   # Vite bundler & Vitest test runner setup
-├── .gitignore           # Git untracked path rules
-└── README.md            # Main repository documentation & setup guide
+├── config/
+│   ├── db.js            # MySQL connection pool, SSL CA setup, and fail-fast env validation
+│   └── init-db.js       # Database schema & seed initialization script with production guard
+├── db/
+│   ├── schema.sql       # Relational tables, foreign keys, and indexes
+│   └── seeds.sql        # Initial sample users, products, photos, and swaps
+├── routes/
+│   ├── products.js      # Product CRUD, JSON_ARRAYAGG photos, and status immutability guards
+│   ├── swap_orders.js   # Atomic swap creation/update/deletion with FOR UPDATE row locks
+│   └── users.js         # User CRUD and cascading swap/product cleanup
+├── tests/
+│   └── swap_orders.tests.js # Live MySQL integration tests (concurrency, locks, validation)
+├── .env.example         # Environment variable template
+├── .gitignore           # Git untracked rules
+├── package.json         # Dependencies and npm scripts
+├── README.md            # Repository documentation & setup guide
+└── server.js            # Express application entry point & global middleware
 ```
 
 ---
@@ -57,17 +49,15 @@ lookbook-api/
 
 ### 2. Environment Configuration
 
-Navigate to the `backend/` directory and copy `.env.example` to `.env`:
+Copy .env.example to .env in the repository root and configure your database and CORS settings:
 
 ```bash
-cd backend
 cp .env.example .env
 ```
 
-Configure your backend variables in `.env`:
-
 ```env
 PORT=3000
+CORS_ORIGIN=http://localhost:5173
 NODE_ENV=development
 
 # Aiven Cloud MySQL (Default)
@@ -75,35 +65,28 @@ DB_HOST=your_aiven_host
 DB_PORT=your_aiven_port
 DB_USER=your_aiven_user
 DB_PASSWORD=your_aiven_password
-DB_SSL=REQUIRED
 DB_NAME=defaultdb
+DB_SSL=REQUIRED
+DB_SSL_CA="./config/ca.pem"
 ```
 
-### 3. Backend Setup & Database Initialization
+### 3. Installation, Database Setup & Server Start
 
 ```bash
 # Install dependencies
-cd backend
 npm install
 
 # Initialize schema and seed data
 npm run init-db
 
-# Start development server
+# Start development server (with auto-reload)
 npm run dev
+
+# Or start in standard mode
+npm start
 ```
 
-The Express API will start on **http://localhost:3000**.
-
-### 4. Frontend Setup
-
-```bash
-cd ../frontend
-npm install
-npm run dev
-```
-
-The React + Vite application will start on **http://localhost:5173**.
+The Express API server will run on http://localhost:3000 (GET / returns a JSON health check).
 
 ---
 
@@ -141,15 +124,12 @@ The React + Vite application will start on **http://localhost:5173**.
 
 ## 🧪 Testing & Security Audits
 
-Run backend and frontend test suites and dependency security audits:
+Integration tests execute directly against a dedicated MySQL test database (lookbook_test) to verify real transactional behavior: concurrent swap race conditions (FOR UPDATE row locks), swapped item protection on product updates/deletes, 400 Bad Request rejection on manual status overrides, and strict payload validation on swap updates.
 
-### Backend Integration Tests (Live MySQL)
+1. Create an isolated .env.test file in the repository root with the same connection credentials as .env and a separate test database name:
 
-Backend tests execute directly against a dedicated MySQL test database (lookbook_test) to verify real transactional behavior: concurrent swap race conditions (FOR UPDATE row locks), swapped item protection on product updates/deletes, status immutability, and strict payload validation on swap updates.
-
-1. Create an isolated .env.test file in backend/ with the same database connection credentials as .env and a separate test database name:
-
-```DB_HOST=your_aiven_host
+```
+DB_HOST=your_aiven_host
 DB_PORT=your_aiven_port
 DB_USER=your_aiven_user
 DB_PASSWORD=your_aiven_password
@@ -158,35 +138,21 @@ DB_SSL=REQUIRED
 DB_SSL_CA="./config/ca.pem"
 ```
 
-2. Initialize the schema on the test database and run the suite:
+2. Initialize the schema on the test database and run the test suite:
 
 ```bash
-cd backend
 NODE_ENV=test npm run init-db
 npm test
 npm audit
 ```
 
-### Frontend Unit & Component Tests
-
-Runs in-memory with Vitest and React Testing Library (no live database connection required):
-
-```bash
-cd ../frontend
-npm test
-npm audit
-```
-
----
-
 ## ✅ Core Features
 
-- Administrative inventory management
-- Peer-to-peer clothing exchange platform
-- Transactional swap processing
-- Automatic status synchronization and immutability guards
-- Batched query execution and SQL JSON_ARRAYAGG photo aggregation
-- Cascading user and product cleanup
-- Verified SSL MySQL connection pooling with fail-fast startup validation
-- Input validation, sanitization, and centralized error handling
-- Live database integration testing and dependency auditing
+- **RESTful API Architecture:** Decoupled backend service with configurable CORS (`CORS_ORIGIN`), JSON health check (`GET /`), and standardized JSON error responses
+- **Transactional Swap Processing:** Atomic 2-user, 2-product swap creation, updates, and deletions protected by pessimistic row locking (`SELECT ... FOR UPDATE`)
+- **Strict Status Immutability Guards:** Item `status` (`available` / `swapped`) is derived exclusively from swap lifecycle events; manual overrides via `PUT /api/products/:id` are explicitly rejected (`400 Bad Request`)
+- **Batched Query Execution & SQL Aggregation:** Eliminates N+1 query bottlenecks on swap retrieval and aggregates product photos via SQL `JSON_ARRAYAGG`
+- **Cascading Data Cleanup:** Deleting a user atomically cancels active swaps, removes owned items, and restores counterparty products to `available`
+- **Verified SSL Connection Pooling:** MySQL (`mysql2/promise`) pool with Aiven SSL CA certificate verification and fail-fast startup environment validation
+- **Input Validation & Error Sanitization:** Regex input sanitization, parameterized SQL queries, and centralized Express error middleware preventing internal DB leaks
+- **Live MySQL Integration Testing:** Automated Mocha, Chai, and Supertest suite verifying concurrency, row locks, and validation rules against an isolated test database

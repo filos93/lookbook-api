@@ -150,24 +150,24 @@ describe('Integration Tests - Swap Orders & Products (Live MySQL)', function () 
   });
 
   // =========================================================================
-  // 3. LA MODIFICA CHE NON MODIFICA (Protezione status su PUT product & payload incompleto su PUT swap)
+  // 3. LA MODIFICA CHE NON MODIFICA (Rifiuto 400 su status in PUT product & payload incompleto su PUT swap)
   // =========================================================================
-  it('PUT /api/products/:id - Ignora la forzatura manuale dello status nel payload', async () => {
+  it('PUT /api/products/:id - Rifiuta con 400 la forzatura manuale dello status nel payload', async () => {
     const res = await request(app)
       .put(`/api/products/${product1Id}`)
       .send({
         name: 'Giacca Vintage Restauro',
         price: 95.00,
-        status: 'swapped' // Deve essere ignorato
+        status: 'swapped' // Deve causare 400 Bad Request
       });
 
-    expect(res.statusCode).to.equal(200);
-    expect(res.body.name).to.equal('Giacca Vintage Restauro');
-    expect(res.body.status).to.equal('available');
+    expect(res.statusCode).to.equal(400);
+    expect(res.body).to.have.property('error');
+    expect(res.body.error).to.include('status');
 
-    // Verifica sul DB reale che lo status non sia stato alterato
+    // Verifica sul DB reale che né il nome né lo status siano stati alterati
     const [rows] = await pool.execute('SELECT name, status FROM products WHERE id = ?', [product1Id]);
-    expect(rows[0].name).to.equal('Giacca Vintage Restauro');
+    expect(rows[0].name).to.equal('Giacca Vintage Pelle');
     expect(rows[0].status).to.equal('available');
   });
 

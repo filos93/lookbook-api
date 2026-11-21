@@ -48,8 +48,12 @@ function validateAndSanitizeProduct(data, isUpdate = false) {
         errors.push('Il campo user_id è obbligatorio.');
     }
 
-    // 4. STATUS ('available' o 'swapped') - Inserimento iniziale consentito, ignorato in PUT per evitare capi bloccati
-    if (!isUpdate) {
+    // 4. STATUS ('available' o 'swapped') - Consentito solo in creazione; rifiutato con 400 in modifica (PUT)
+    if (isUpdate) {
+        if (data.status !== undefined) {
+            errors.push("Il campo 'status' non è modificabile manualmente; viene gestito automaticamente dagli ordini di scambio.");
+        }
+    } else {
         if (data.status !== undefined) {
             const validStatuses = ['available', 'swapped'];
             if (!validStatuses.includes(data.status)) {
@@ -167,7 +171,7 @@ router.post('/', async (req, res, next) => {
     }
 });
 
-// PUT /api/products/:id - Modifica prodotto (status rimosso dai campi modificabili)
+// PUT /api/products/:id - Modifica prodotto (rifiuta con 400 eventuali tentativi di modifica dello status)
 router.put('/:id', async (req, res, next) => {
     const { id } = req.params;
     

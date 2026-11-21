@@ -6,9 +6,9 @@
 .env.development.local
 .env.test.local
 .env.production.local
+!.env.example
 
 # Certificates, keys, and SSL local files
-backend/config/ca.pem
 config/ca.pem
 *.pem
 
@@ -20,7 +20,6 @@ node_modules/
 # Testing and coverage
 coverage/
 *.lcov
-.vitest/
 
 # Build and production outputs
 dist/
@@ -38,9 +37,7 @@ pnpm-debug.log*
 
 # Editor and OS specific files
 .DS_Store
-.vscode/*
-!.vscode/extensions.json
-!.vscode/settings.json
+.vscode/
 .idea/
 *.suo
 *.ntvs*

@@ -1,38 +1,39 @@
 const express = require('express');
-const path = require('path');
 const cors = require('cors');
 require('dotenv').config();
 
 const app = express();
 
 // Middleware
-app.use(cors());
+app.use(cors({
+    origin: process.env.CORS_ORIGIN || '*'
+}));
 app.use(express.json());
+
+// Health Check Endpoint
+app.get('/', (req, res) => {
+    res.json({
+        status: 'ok',
+        service: 'LookBook REST API'
+    });
+});
 
 // Registrazione Rotte API
 app.use('/api/users', require('./routes/users'));
 app.use('/api/products', require('./routes/products'));
 app.use('/api/swaps', require('./routes/swap_orders'));
 
-// Gestione risorse statiche e build React (Produzione)
-const distPath = path.join(__dirname, '../frontend/dist');
-app.use(express.static(distPath));
-
-// Fallback per SPA React (Express 5 wildcard / catch-all)
-app.get('/{*splat}', (req, res, next) => {
-    if (req.path.startsWith('/api')) return next();
-    
-    res.sendFile(path.join(distPath, 'index.html'), (err) => {
-        if (err && !res.headersSent) {
-            res.status(200).send('API Express attiva (Frontend dist non ancora compilato).');
-        }
+// Gestione Rotte Non Trovate (404 JSON)
+app.use((req, res) => {
+    res.status(404).json({
+        error: `Endpoint non trovato: ${req.method} ${req.originalUrl}`
     });
 });
 
 // Middleware Globale Gestione Errori (4 parametri)
 app.use((err, req, res, next) => {
     // Log completo dell'errore lato server per il debugging
-    console.error('❌ Errore Backend Uncaught:', err.stack || err);
+    console.error('❌ Errore API Uncaught:', err.stack || err);
 
     // Evita di esporre dettagli interni del database o query SQL al client
     const isProduction = process.env.NODE_ENV === 'production';
@@ -54,6 +55,6 @@ module.exports = app;
 if (require.main === module) {
     const PORT = process.env.PORT || 3000;
     app.listen(PORT, () => {
-        console.log(`🚀 Server Express in ascolto su http://localhost:${PORT}`);
+        console.log(`🚀 Server Express API in ascolto su http://localhost:${PORT}`);
     });
 }
