@@ -45,22 +45,28 @@ Built with **Node.js**, **Express 5**, and **MySQL**, the API provides secure an
 ## 🏗️ Architecture
 
 ```text
-┌─────────────────────────────┐
-│ React Frontend (Vite)       │
-│ lookbook-frontend           │
-└──────────────┬──────────────┘
-               │ REST API
-               ▼
-┌─────────────────────────────┐
-│ Express 5 API              │
-│ Node.js Backend            │
-└──────────────┬──────────────┘
-               │
-               ▼
-┌─────────────────────────────┐
-│ MySQL Database             │
-│ Aiven Cloud / Local        │
-└─────────────────────────────┘
+┌────────────────────────────────────┐
+│        HTTP Client (JSON)          │
+└─────────────────┬──────────────────┘
+                  │ REST / HTTPS
+                  ▼
+┌────────────────────────────────────┐
+│     Express 5 & Middleware         │
+│  (CORS, JSON Parser, Error Handler)│
+└─────────────────┬──────────────────┘
+                  │
+                  ▼
+┌────────────────────────────────────┐
+│    REST Routes & Validation        │
+│ (/api/users, /products, /swaps)    │
+└─────────────────┬──────────────────┘
+                  │ ACID Tx &
+                  │ FOR UPDATE Locks
+                  ▼
+┌────────────────────────────────────┐
+│          MySQL Database            │
+│      (Aiven Cloud / Local)         │
+└────────────────────────────────────┘
 ```
 
 ---
@@ -140,7 +146,7 @@ CORS_ORIGIN=http://localhost:5173
 NODE_ENV=development
 
 DB_HOST=your_host
-DB_PORT=3306
+DB_PORT=your_aiven_port_here
 DB_USER=your_user
 DB_PASSWORD=your_password
 DB_NAME=defaultdb
@@ -195,7 +201,8 @@ Example response:
 
 ```json
 {
-  "message": "LookBook API is running"
+  "status": "ok",
+  "service": "LookBook REST API"
 }
 ```
 
@@ -233,7 +240,7 @@ Base route:
 |----------|----------|----------|
 | GET | `/api/products` | Retrieve products with owners and photos |
 | POST | `/api/products` | Create a new product |
-| PUT | `/api/products/:id` | Update product details |
+| PUT | `/api/products/:id` | Update product details (rejects manual status edits with 400 Bad Request) |
 | DELETE | `/api/products/:id` | Delete an available product |
 
 ---
@@ -341,11 +348,10 @@ Create a separate `.env.test` file:
 
 ```env
 DB_HOST=your_host
-DB_PORT=3306
+DB_PORT=your_aiven_port_here
 DB_USER=your_user
 DB_PASSWORD=your_password
 DB_NAME=lookbook_test
-
 DB_SSL=REQUIRED
 DB_SSL_CA=./config/ca.pem
 ```
@@ -417,14 +423,6 @@ Mocha, Chai, and Supertest verify:
 - Validation rules
 - Status immutability
 - API response behavior
-
----
-
-## 🔗 Related Repository
-
-Frontend Application:
-
-- [lookbook-frontend](https://github.com/filos93/lookbook-frontend)
 
 ---
 
