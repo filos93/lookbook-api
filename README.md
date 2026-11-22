@@ -378,51 +378,32 @@ npm audit
 
 ## ✅ Core Features
 
-### Transactional Swap Engine
-
+- **Transactional Swap Engine**
 Swap creation, updates, and deletions execute inside MySQL transactions to ensure consistency and rollback safety.
 
-### Pessimistic Locking
-
+- **Pessimistic Locking**
 Uses `SELECT ... FOR UPDATE` to prevent concurrent modifications of the same products.
 
-### Status Synchronization
-
+- **Status Synchronization**
 Product availability is derived automatically from swap activity and cannot be manually overridden.
 
-### Cascading Cleanup
+- **Cascading Cleanup**
+Deleting a user automatically: Removes owned products; Resolves associated swaps; Restores affected product availability.
 
-Deleting a user automatically:
-
-- Removes owned products
-- Resolves associated swaps
-- Restores affected product availability
-
-### Efficient Data Retrieval
-
+- **Efficient Data Retrieval**
 Uses SQL aggregation (`JSON_ARRAYAGG`) and optimized queries to minimize database round-trips.
 
-### Secure Database Access
-
+- **Secure Database Access**
 Supports both local MySQL and Aiven Cloud deployments with SSL certificate validation.
 
-### Input Validation
-
+- **Input Validation**
 Validates emails, names, prices, identifiers, and business rules before processing requests.
 
-### Centralized Error Handling
-
+- **Centralized Error Handling**
 Returns consistent JSON responses while preventing exposure of internal database details.
 
-### Automated Integration Testing
-
-Mocha, Chai, and Supertest verify:
-
-- Swap transactions
-- Concurrency protection
-- Validation rules
-- Status immutability
-- API response behavior
+- **Automated Integration Testing**
+Mocha, Chai, and Supertest verify: Swap transactions; Concurrency protection; Validation rules; Status immutability; API response behavior.
 
 ---
 
